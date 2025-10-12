@@ -778,7 +778,7 @@
         }
 
         /**
-         * 将账单内容转换为图片并下载 (针对 iOS 兼容性优化)
+         * 将账单内容转换为图片并下载 (已优化 iOS 兼容性，并移除了无效的 App 跳转)
          */
         function printBillToImage() {
             const currentOrder = loadCurrentOrder(currentTable);
@@ -821,12 +821,12 @@
                     <span>总计：</span>
                     <span>${total.toFixed(0)} Ks</span>
                 </div>
-                <p style="text-align:center; margin-top: 15px; font-size: 10px;">-- 感谢您的光临 --</p>
-            `; // 增加感谢语
+                <p style="text-align:center; margin-top: 15px; font-size: 10px;">-- 感谢您的光临 --</p> 
+            `;
             
             printArea.innerHTML = printContent;
             
-            // 2. 临时设置 print-area 样式，使其可以被 html2canvas 捕获
+            // 2. 临时设置 print-area 样式
             const originalDisplay = printArea.style.display;
             printArea.style.display = 'block'; 
             printArea.style.opacity = '1';
@@ -850,7 +850,7 @@
                 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                 
                 if (isIOS) {
-                    // --- iOS 特殊处理：打开新窗口显示图片并提示用户 ---
+                    // --- iOS 特殊处理：打开新窗口显示图片并提示用户长按保存 ---
                     const newWindow = window.open();
                     newWindow.document.write(`
                         <html lang="zh-CN">
@@ -881,16 +881,7 @@
                     document.body.removeChild(a);
                 }
                 
-                // 6. 尝试打开自定义应用程序
-                // ******************************************************************
-                // *** 请将 'myposapp://receipt_complete' 替换为您自定义 App 的 URL Scheme ***
-                // ******************************************************************
-                const customAppScheme = 'myposapp://receipt_complete'; 
-                
-                // 延迟执行以确保浏览器有时间处理下载请求。
-                setTimeout(() => {
-                    window.location.href = customAppScheme;
-                }, 100); 
+                // 移除原有的 window.location.href = customAppScheme; 调用，解决 Safari 的网址无效错误。
 
             }).catch(error => {
                 console.error("图片生成失败:", error);
@@ -1352,7 +1343,7 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "历史账单");
             
-            // --- 【关键修改】使用 XLSX.write() 和 FileSaver.js 的 saveAs 函数 ---
+            // --- 【关键修改】使用 XLSX.write() 和 FileSaver.js 的 saveAs 函数，以提高 iOS 兼容性 ---
             try {
                 // 生成 ArrayBuffer 格式的 Excel 数据
                 const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -1360,11 +1351,11 @@
                 // 将 ArrayBuffer 转换为 Blob 对象
                 const blob = new Blob([wbout], { type: 'application/octet-stream' });
 
-                // 使用 FileSaver.js 提供的 saveAs 方法进行下载，这在 iOS 上的兼容性更好
+                // 使用 FileSaver.js 提供的 saveAs 方法进行下载
                 saveAs(blob, '历史账单.xlsx');
                 
             } catch (e) {
-                // 如果 FileSaver.js 失败，退回到标准的 writeFile (防止出现其他错误)
+                // 如果 FileSaver.js 失败，退回到标准的 writeFile
                 console.error("使用 Blob 导出失败，尝试使用原生 writeFile:", e);
                 XLSX.writeFile(wb, '历史账单.xlsx');
             }
