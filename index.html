@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>烧烤账单计算器 - 中文注释版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         /* ----------------------- CSS 样式区 - 界面布局和美化 ----------------------- */
         
@@ -778,7 +778,7 @@
         }
 
         /**
-         * 将账单内容转换为图片并下载 (修正了临时显示逻辑)
+         * 将账单内容转换为图片并下载 (针对 iOS 兼容性优化)
          */
         function printBillToImage() {
             const currentOrder = loadCurrentOrder(currentTable);
@@ -821,52 +821,73 @@
                     <span>总计：</span>
                     <span>${total.toFixed(0)} Ks</span>
                 </div>
-            `;
+                <p style="text-align:center; margin-top: 15px; font-size: 10px;">-- 感谢您的光临 --</p>
+            `; // 增加感谢语
             
             printArea.innerHTML = printContent;
             
             // 2. 临时设置 print-area 样式，使其可以被 html2canvas 捕获
-            
-            // 备份原始 display 样式
             const originalDisplay = printArea.style.display;
-            
-            // 确保元素可见，但保持其 off-screen 的位置
             printArea.style.display = 'block'; 
             printArea.style.opacity = '1';
-            
-            // 强制浏览器重绘
             void printArea.offsetWidth; 
 
             // 3. 使用 html2canvas 将 DOM 元素转为 Canvas
             html2canvas(printArea, { 
-                scale: 2, // 提高分辨率
+                scale: 2, 
                 useCORS: true, 
-                backgroundColor: '#ffffff', // 确保背景是白色
+                backgroundColor: '#ffffff',
             }).then(canvas => {
                 // 将 Canvas 转换为图片 URL (data URL)
                 const imgUrl = canvas.toDataURL('image/png');
                 
-                // 创建一个下载链接并触发点击
-                const a = document.createElement('a');
-                a.href = imgUrl;
-                a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                // 4. 恢复 print-area 的原始状态 (隐藏到屏幕外)
-                printArea.style.display = originalDisplay; // 恢复到 CSS 默认的 display: none
+                // 4. 恢复 print-area 的原始状态
+                printArea.style.display = originalDisplay; 
                 printArea.style.opacity = '0';
-                printArea.innerHTML = ''; // 清空内容
+                printArea.innerHTML = ''; 
 
-                // 【新增功能】5. 尝试打开自定义应用程序
+                // 5. 【核心判断】检查是否为 iOS 设备 (用于区分下载行为)
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                
+                if (isIOS) {
+                    // --- iOS 特殊处理：打开新窗口显示图片并提示用户 ---
+                    const newWindow = window.open();
+                    newWindow.document.write(`
+                        <html lang="zh-CN">
+                        <head>
+                            <title>账单图片 - 请长按保存</title>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                            <style>
+                                body { background: #f0f0f0; margin: 0; padding: 20px; text-align: center; }
+                                p { font-size: 18px; color: #333; margin-top: 50px; }
+                                img { max-width: 90%; height: auto; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+                                .tip { color: #e74c3c; font-weight: bold; margin-bottom: 20px; }
+                            </style>
+                        </head>
+                        <body>
+                            <p class="tip">【重要提示】请长按下方图片，然后选择“存储图像”保存到相册！</p>
+                            <img src="${imgUrl}" alt="账单图片">
+                        </body>
+                        </html>
+                    `);
+                    newWindow.document.close();
+                } else {
+                    // --- Android/PC 标准下载处理 ---
+                    const a = document.createElement('a');
+                    a.href = imgUrl;
+                    a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+                
+                // 6. 尝试打开自定义应用程序
                 // ******************************************************************
                 // *** 请将 'myposapp://receipt_complete' 替换为您自定义 App 的 URL Scheme ***
                 // ******************************************************************
                 const customAppScheme = 'myposapp://receipt_complete'; 
                 
                 // 延迟执行以确保浏览器有时间处理下载请求。
-                // 注意：在某些浏览器或平台上，如果 App 未安装，可能会有错误提示。
                 setTimeout(() => {
                     window.location.href = customAppScheme;
                 }, 100); 
@@ -1286,7 +1307,7 @@
         }
         
         /**
-         * 导出到Excel
+         * 导出到Excel (增强 iOS 兼容性)
          */
         function exportToExcel() {
             const data = [];
@@ -1295,45 +1316,59 @@
             // 获取所有日期键
             const keys = [];
             for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key.startsWith('bbq_orders_by_date_')) {
-                        keys.push(key);
-                    }
+                const key = localStorage.key(i);
+                if (key.startsWith('bbq_orders_by_date_')) {
+                    keys.push(key);
                 }
+            }
+            
+            keys.sort().reverse();
+            
+            for (const key of keys) {
+                const date = key.replace('bbq_orders_by_date_', '');
+                const dailyOrders = JSON.parse(localStorage.getItem(key));
                 
-                keys.sort().reverse();
-                
-                for (const key of keys) {
-                    const date = key.replace('bbq_orders_by_date_', '');
-                    const dailyOrders = JSON.parse(localStorage.getItem(key));
+                for (const order of dailyOrders) {
+                    const timestamp = new Date(order.timestamp);
+                    const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
                     
-                    for (const order of dailyOrders) {
-                        const timestamp = new Date(order.timestamp);
-                        const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
-                        
-                        let hasItems = false;
-                        for (const itemName in order.order) {
-                            hasItems = true;
-                            const quantity = order.order[itemName];
-                            const item = menuItems.find(i => i.name === itemName) || { price: 0 };
-                            const subtotal = item.price * quantity;
-                            data.push([date, order.table, timeString, itemName, quantity, item.price, subtotal, '']);
-                        }
-                        if (hasItems) {
-                            data[data.length - 1][7] = order.total; // 在最后一个项添加订单总计
-                        } else {
-                            data.push([date, order.table, timeString, '', '', '', '', order.total]);
-                        }
+                    let hasItems = false;
+                    for (const itemName in order.order) {
+                        hasItems = true;
+                        const quantity = order.order[itemName];
+                        const item = menuItems.find(i => i.name === itemName) || { price: 0 };
+                        const subtotal = item.price * quantity;
+                        data.push([date, order.table, timeString, itemName, quantity, item.price, subtotal, '']);
+                    }
+                    if (hasItems) {
+                        data[data.length - 1][7] = order.total;
+                    } else {
+                        data.push([date, order.table, timeString, '', '', '', '', order.total]);
                     }
                 }
+            }
+            
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "历史账单");
+            
+            // --- 【关键修改】使用 XLSX.write() 和 FileSaver.js 的 saveAs 函数 ---
+            try {
+                // 生成 ArrayBuffer 格式的 Excel 数据
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
                 
-                const ws = XLSX.utils.aoa_to_sheet(data);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "历史账单");
+                // 将 ArrayBuffer 转换为 Blob 对象
+                const blob = new Blob([wbout], { type: 'application/octet-stream' });
+
+                // 使用 FileSaver.js 提供的 saveAs 方法进行下载，这在 iOS 上的兼容性更好
+                saveAs(blob, '历史账单.xlsx');
                 
-                // XLSX.writeFile() 在有 FileSaver.js 的情况下才能正常触发下载
+            } catch (e) {
+                // 如果 FileSaver.js 失败，退回到标准的 writeFile (防止出现其他错误)
+                console.error("使用 Blob 导出失败，尝试使用原生 writeFile:", e);
                 XLSX.writeFile(wb, '历史账单.xlsx');
             }
+        }
             
             /**
              * 清空所有历史账单
