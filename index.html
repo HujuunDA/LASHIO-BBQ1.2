@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>烧烤账单计算器 - 中文注释版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         /* ----------------------- CSS 样式区 - 界面布局和美化 ----------------------- */
@@ -1330,6 +1331,7 @@
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "历史账单");
                 
+                // XLSX.writeFile() 在有 FileSaver.js 的情况下才能正常触发下载
                 XLSX.writeFile(wb, '历史账单.xlsx');
             }
             
