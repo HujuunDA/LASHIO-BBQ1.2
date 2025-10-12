@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>烧烤账单计算器 - 中文注释版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        /* ----------------------- CSS 样式区 - 界面布局和美化 ----------------------- */
+        
+        /* 引入现代字体 */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+        /* 整体页面样式 */
+        body {
+            font-family: 'Poppins', 'Microsoft YaHei', 'SimHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #e36711, #ffbe91);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: #333;
+            margin: 0;
+        }
+
+        /* 关键：控制不同桌子菜单的显示状态 */
+        .table-menu-container {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+        .table-menu-container.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        /* 隐藏数量输入框的上下箭头 */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* ----------------------- 打印样式 (用于图片转换时的样式基准) ----------------------- */
+           
+        #print-area {
+            /* 允许 JS 临时设置为 'block' */
+            display: none; 
+            
+            /* 模拟收据纸宽度，确保图片尺寸合理 */
+            width: 300px; 
+            margin: 0; 
+            padding: 10px;
+            background-color: #fff; /* 背景色必须是白色，否则图片会透明 */
+            font-family: 'Microsoft YaHei', 'SimHei', monospace;
+            font-size: 14px;
+            line-height:1.5;
+            color: #000;
+            box-sizing: border-box;
+            position: absolute; /* 防止在页面上占位 */
+            top: -9999px; /* 移到屏幕外 */
+            left: -9999px;
+            z-index: 9999;
+            opacity: 0; /* 默认隐藏，用于防止闪烁 */
+        }
+        #print-area h2 {
+            text-align: center;
+            font-size: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            color: #000;
+        }
+        #print-area p {
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        #print-area .print-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom:4px;
+            font-size: 14px;
+        }
+        #print-area .print-total {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            border-top: 2px solid #000;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        #print-area .print-info {
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        #print-area hr {
+            border: none;
+            border-top: 1px dashed #000;
+            margin: 10px 0;
+        }
+        
+        /* ----------------------- 顶部控制栏样式 ----------------------- */
+        .top-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 20px;
+            z-index: 100;
+            flex-wrap: nowrap;
+        }
+        .top-bar .dropdown {
+            margin-left: 10px; 
+        }
+
+        /* 下拉菜单基础样式 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* 下拉菜单按钮 */
+        .dropbtn {
+            background-color: #ff7e5f;
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        
+        /* 设置按钮图标样式 */
+        #settings-dropbtn {
+            font-size: 24px;
+            padding: 8px 15px;
+        }
+
+        /* 按钮悬停效果 */
+        .dropbtn:hover {
+            background-color: #ff5e3a;
+            transform: translateY(-2px);
+        }
+
+        /* 下拉菜单内容容器 */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.9);
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            right: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-content a:hover {
+            background-color: rgba(255, 126, 95, 0.2);
+        }
+
+        /* 鼠标悬停在下拉菜单按钮上时显示内容 */
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        
+        /* ----------------------- 主体内容区样式 ----------------------- */
+        .main-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 卡片容器基础样式 */
+        .container, .bill-details-wrapper, .summary-total {
+            background-color: rgba(255, 255, 255, 0.4);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+        
+        /* 账单明细容器 */
+        .bill-details-wrapper {
+            overflow-y: auto;
+            flex-grow: 1;
+            min-height: 100px;
+        }
+
+        /* 标题样式 */
+        h2 {
+            border-bottom: 2px solid #ffc3a0;
+            padding-bottom: 15px;
+            margin-top: 0;
+            color: #f39c12;
+            font-weight: 600;
+        }
+
+        /* ----------------------- 菜品项样式 ----------------------- */
+        .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        .item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .item-image {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 15px;
+            border: 2px solid #ffc3a0;
+            pointer-events: none;
+        }
+
+        .item-info {
+            flex-grow: 1;
+            pointer-events: none;
+        }
+
+        /* 数量控制区：垂直布局 */
+        .item-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 5px;
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+        }
+
+        .item-controls input {
+            width: 40px;
+            text-align: center;
+            margin: 5px 0;
+            border: none;
+            background-color: transparent;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        
+        .item-controls button {
+            background-color: #ff7e5f;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        .item-controls button:hover {
+            background-color: #ff5e3a;
+            transform: scale(1.1);
+        }
+
+        /* ----------------------- 账单明细样式 ----------------------- */
+        #bill-details div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px dashed #ffc3a0;
+        }
+        
+        #bill-details .item-total {
+            min-width: 100px;
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        /* 总计金额样式 */
+        .total {
+            font-size: 1.8em;
+            font-weight: 700;
+            text-align: right;
+            color: #f39c12;
+            padding-top: 15px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        /* 结算按钮样式 */
+        .action-buttons button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1em;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .action-buttons button:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        /* ----------------------- 菜单编辑模式样式 ----------------------- */
+        .menu-editor-container {
+            background-color: rgba(255, 255, 255, 0.4);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+        }
+        
+        .menu-editor-container table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        
+        .menu-editor-container th,
+        .menu-editor-container td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .menu-editor-container th {
+            background-color: rgba(255, 195, 160, 0.3);
+        }
+        
+        .menu-editor-container input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .menu-editor-container button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        
+        .menu-editor-container button:hover {
+            background-color: #2980b9;
+        }
+        
+        .add-new {
+            background-color: #27ae60 !important;
+            padding: 10px 20px !important;
+        }
+        
+        .add-new:hover {
+            background-color: #219653 !important;
+        }
+
+        /* ----------------------- 汇总模式样式 ----------------------- */
+        #summary-content {
+            background-color: rgba(255, 255, 255, 0.4);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+        }
+        
+        .daily-summary-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 8px;
+        }
+        
+        .daily-summary-section h3 {
+            color: #f39c12;
+            margin-top: 0;
+        }
+        
+        .daily-summary-section .daily-total {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        
+        #grand-total {
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            color: #f39c12;
+        }
+        
+        .summary-action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .summary-action-buttons button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .summary-action-buttons button.export {
+            background-color: #27ae60;
+        }
+        
+        .summary-action-buttons button:hover {
+            opacity: 0.9;
+        }
+
+        /* 新增：订单详情样式 */
+        .order-details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+        }
+
+        .order-details p {
+            margin: 5px 0;
+        }
+
+        .order-items {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .order-items li {
+            margin-bottom: 5px;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="dropdown table-selector-dropdown">
+            <button id="table-selector-dropbtn" class="dropbtn table-selector-dropbtn">桌号</button>
+            <div id="table-dropdown-content" class="dropdown-content">
+                </div>
+        </div>
+
+        <div class="dropdown">
+            <button id="settings-dropbtn" class="dropbtn">&#9881;</button>
+            <div id="action-dropdown" class="dropdown-content">
+                <a href="#" id="summary-link" onclick="toggleSummaryMode()">查看汇总</a>
+                <a href="#" id="edit-link" onclick="toggleEditMode()">编辑菜单</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-content" class="main-container">
+        <div class="container">
+            <div id="menu-area"></div>
+        </div>
+        
+        <div class="bill-details-wrapper">
+            <h2>账单明细</h2>
+            <div id="bill-details"></div>
+        </div>
+        
+        <div class="summary-total">
+            <hr>
+            <div class="total">
+                <p>总计：<span id="total-price">0.00</span> Ks</p>
+            </div>
+            <div class="action-buttons">
+                <button id="settle-button" onclick="settleAndClear()">结算并清空</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="edit-content" class="menu-editor-container" style="display: none;">
+        <h2>菜单编辑</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>名称</th>
+                    <th>价格</th>
+                    <th>图片</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="menu-editor-body">
+                </tbody>
+        </table>
+        <button class="add-new" onclick="addNewItem()">添加新菜品</button>
+        <button onclick="toggleEditMode()" style="background-color: #95a5a6; margin-left: 10px;">返回点单</button>
+    </div>
+
+    <div id="summary-content" style="display: none;">
+        <h2>每日开单汇总</h2>
+        <div id="summary-container">
+            </div>
+        <div id="grand-total">总营业额: 0 Ks</div>
+        <div class="summary-action-buttons">
+            <button class="export" onclick="exportToExcel()">导出历史账单</button>
+            <button onclick="clearAllHistory()">清空所有历史账单</button>
+            <button onclick="toggleSummaryMode()">返回点单</button>
+        </div>
+    </div>
+
+    <div id="print-area"></div>
+
+    <script>
+        // --- IndexedDB 数据存储配置 ---
+        const dbName = 'bbq_pos_db';
+        const dbVersion = 1;
+        const menuStoreName = 'menu_items';
+        let db;
+        
+        // --- 全局变量和元素引用 ---
+        let menuItems = [];
+        const numTables = 10;
+        let currentTable = 1;
+        
+        let isEditMode = false;
+        let isSummaryMode = false;
+
+        // 获取 DOM 元素的引用
+        const mainContent = document.getElementById('main-content');
+        const editContent = document.getElementById('edit-content');
+        const summaryContent = document.getElementById('summary-content');
+        const menuArea = document.getElementById('menu-area');
+        const billDetails = document.getElementById('bill-details');
+        const totalPriceSpan = document.getElementById('total-price');
+        const settleButton = document.getElementById('settle-button');
+        const tableSelectorDropbtn = document.getElementById('table-selector-dropbtn');
+        const tableDropdownContent = document.getElementById('table-dropdown-content');
+        const editLink = document.getElementById('edit-link');
+        const summaryLink = document.getElementById('summary-link');
+        const printArea = document.getElementById('print-area'); 
+
+        const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iOCIgZmlsbD0iI0ZGM0E1MCIvPgo8cGF0aCBkPSJNMzUgMzVMMzUgMjVNMzUgNDVNNDUgMzVMMjUgMzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=";
+
+        // --- IndexedDB 数据库操作函数 (保持不变) ---
+
+        /** * 打开或创建 IndexedDB 数据库 */
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, dbVersion);
+
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains(menuStoreName)) {
+                        db.createObjectStore(menuStoreName, { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+
+                request.onerror = (event) => {
+                    console.error("IndexedDB 错误:", event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+        
+        /** * 从数据库获取所有菜单项 */
+        async function getMenuItems() {
+            if (!db) await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([menuStoreName], 'readonly');
+                const store = transaction.objectStore(menuStoreName);
+                const request = store.getAll();
+                request.onsuccess = (event) => resolve(event.target.result);
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+
+        /** * 保存菜单项到数据库 */
+        async function saveMenuItemToDB(item) {
+            if (!db) await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([menuStoreName], 'readwrite');
+                const store = transaction.objectStore(menuStoreName);
+                const request = store.put(item);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+
+        /** * 从数据库删除菜单项 */
+        async function deleteMenuItemFromDB(id) {
+            if (!db) await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([menuStoreName], 'readwrite');
+                const store = transaction.objectStore(menuStoreName);
+                const request = store.delete(id);
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+
+        // 初始化默认菜单项
+        async function initializeDefaultMenu() {
+            const defaultMenu = [
+                { name: "羊肉串", price: 2000 },
+                { name: "牛肉串", price: 2500 },
+                { name: "鸡翅", price: 3000 },
+                { name: "烤鱼", price: 5000 },
+                { name: "烤虾", price: 4000 },
+                { name: "烤玉米", price: 1500 },
+                { name: "烤茄子", price: 2000 },
+                { name: "烤韭菜", price: 1500 }
+            ];
+            
+            if (!db) await openDB();
+            const transaction = db.transaction([menuStoreName], 'readwrite');
+            const store = transaction.objectStore(menuStoreName);
+            
+            for (const item of defaultMenu) {
+                store.add(item);
+            }
+            
+            return defaultMenu;
+        }
+        
+        // 加载菜单项
+        async function loadMenuItems() {
+            try {
+                const items = await getMenuItems();
+                if (items.length === 0) {
+                    menuItems = await initializeDefaultMenu();
+                } else {
+                    menuItems = items;
+                }
+            } catch (error) {
+                console.error("加载菜单项失败:", error);
+                menuItems = await initializeDefaultMenu();
+            }
+        }
+
+        // --- 辅助工具函数 (保持不变) ---
+
+        /**
+         * 播放音效（用于点单反馈）
+         */
+        function playSound() {
+            // 简化的音效实现
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                gainNode.gain.value = 0.1;
+                
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (e) {
+                console.log("音频播放失败:", e);
+            }
+        }
+
+        /**
+         * 触发设备震动（用于点单反馈）
+         */
+        function vibrateDevice() {
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        /**
+         * 获取当前日期字符串 (格式: YYYY-MM-DD)
+         */
+        function getTodayDateString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
+            const day = today.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        /**
+         * 计算给定订单的总价
+         */
+        function calculateTotal(orderData) {
+            let total = 0;
+            for (const itemName in orderData) {
+                const quantity = orderData[itemName];
+                const item = menuItems.find(i => i.name === itemName);
+                if (item) {
+                    total += item.price * quantity;
+                }
+            }
+            return total;
+        }
+
+        /**
+         * 从 LocalStorage 加载指定桌子的当前订单
+         */
+        function loadCurrentOrder(tableNumber) {
+            const savedOrder = localStorage.getItem(`bbq_order_table_${tableNumber}`);
+            return savedOrder ? JSON.parse(savedOrder) : {};
+        }
+
+        // --- 核心点单逻辑函数 ---
+
+        /** * 切换当前操作的桌号 (保持不变) */
+        async function switchTable(tableNumber) {
+            if (isEditMode || isSummaryMode) return;
+            
+            // 切换菜单容器的显示状态
+            const currentMenuContainer = document.querySelector(`.table-menu-container.active`);
+            const nextMenuContainer = document.getElementById(`table-${tableNumber}-menu`);
+            if (currentMenuContainer) {
+                currentMenuContainer.classList.remove('active');
+            }
+
+            currentTable = tableNumber;
+            tableSelectorDropbtn.textContent = `${currentTable}号桌`;
+            settleButton.textContent = `结算并清空${tableNumber}号桌`;
+
+            // 延迟切换，确保动画平滑
+            setTimeout(() => {
+                if (nextMenuContainer) {
+                    nextMenuContainer.classList.add('active');
+                }
+                updateBill(); // 切换桌子后立即更新账单
+            }, 100);
+        }
+
+        /**
+         * 将账单内容转换为图片并下载 (修正了临时显示逻辑)
+         */
+        function printBillToImage() {
+            const currentOrder = loadCurrentOrder(currentTable);
+            const total = calculateTotal(currentOrder);
+            const todayDate = getTodayDateString();
+            
+            // 获取当前时间
+            const now = new Date();
+            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            // 1. 生成打印内容
+            let printContent = `
+                <h2>账单</h2> 
+                <div class="print-info">
+                    <p>日期: ${todayDate}</p>
+                    <p>时间: ${timeString}</p>
+                    <p>桌号: ${currentTable}号桌</p>
+                </div>
+                <hr>
+            `;
+            
+            // 添加订单项目
+            for (const itemName in currentOrder) {
+                const quantity = currentOrder[itemName];
+                const item = menuItems.find(i => i.name === itemName);
+                if (item && quantity > 0) {
+                    const subtotal = item.price * quantity;
+                    printContent += `
+                        <div class="print-item">
+                            <span>${itemName} x ${quantity}</span>
+                            <span>${subtotal.toFixed(0)} Ks</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            printContent += `
+                <hr>
+                <div class="print-total">
+                    <span>总计：</span>
+                    <span>${total.toFixed(0)} Ks</span>
+                </div>
+            `;
+            
+            printArea.innerHTML = printContent;
+            
+            // 2. 临时设置 print-area 样式，使其可以被 html2canvas 捕获
+            
+            // 备份原始 display 样式
+            const originalDisplay = printArea.style.display;
+            
+            // 确保元素可见，但保持其 off-screen 的位置
+            printArea.style.display = 'block'; 
+            printArea.style.opacity = '1';
+            
+            // 强制浏览器重绘
+            void printArea.offsetWidth; 
+
+            // 3. 使用 html2canvas 将 DOM 元素转为 Canvas
+            html2canvas(printArea, { 
+                scale: 2, // 提高分辨率
+                useCORS: true, 
+                backgroundColor: '#ffffff', // 确保背景是白色
+            }).then(canvas => {
+                // 将 Canvas 转换为图片 URL (data URL)
+                const imgUrl = canvas.toDataURL('image/png');
+                
+                // 创建一个下载链接并触发点击
+                const a = document.createElement('a');
+                a.href = imgUrl;
+                a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // 4. 恢复 print-area 的原始状态 (隐藏到屏幕外)
+                printArea.style.display = originalDisplay; // 恢复到 CSS 默认的 display: none
+                printArea.style.opacity = '0';
+                printArea.innerHTML = ''; // 清空内容
+
+                // 【新增功能】5. 尝试打开自定义应用程序
+                // ******************************************************************
+                // *** 请将 'myposapp://receipt_complete' 替换为您自定义 App 的 URL Scheme ***
+                // ******************************************************************
+                const customAppScheme = 'myposapp://receipt_complete'; 
+                
+                // 延迟执行以确保浏览器有时间处理下载请求。
+                // 注意：在某些浏览器或平台上，如果 App 未安装，可能会有错误提示。
+                setTimeout(() => {
+                    window.location.href = customAppScheme;
+                }, 100); 
+
+            }).catch(error => {
+                console.error("图片生成失败:", error);
+                alert("图片生成失败，请检查浏览器控制台。");
+                
+                // 确保在出错时也恢复状态
+                printArea.style.display = originalDisplay;
+                printArea.style.opacity = '0';
+            });
+        }
+
+        /**
+         * 结算并清空当前桌子的订单 (调用 printBillToImage)
+         */
+        function settleAndClear() {
+            const currentOrder = loadCurrentOrder(currentTable);
+            const total = calculateTotal(currentOrder);
+
+            if (total > 0) {
+                if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
+                    // 1. 下载账单图片 (替代了打印)
+                    printBillToImage();
+
+                    // 2. 记录历史订单到 LocalStorage
+                    const todayDate = getTodayDateString();
+                    const historyKey = `bbq_orders_by_date_${todayDate}`;
+                    let dailyOrders = JSON.parse(localStorage.getItem(historyKey)) || [];
+                    
+                    dailyOrders.push({
+                        table: currentTable,
+                        timestamp: new Date().toISOString(),
+                        order: currentOrder,
+                        total: total
+                    });
+                    
+                    localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
+                    
+                    // 3. 清空当前桌子的 LocalStorage 订单
+                    localStorage.removeItem(`bbq_order_table_${currentTable}`);
+
+                    // 4. 清空界面上的数量和账单显示
+                    const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
+                    if (currentMenuContainer) {
+                        currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
+                            input.value = 0;
+                        });
+                    }
+                    updateBill();
+                    
+                    alert(`${currentTable}号桌结算成功！`);
+                }
+            } else {
+                alert('当前账单为空，无需结算。');
+            }
+        }
+        
+        /** * 预加载并渲染所有桌子的菜单界面 (保持不变) */
+        async function renderAllMenus() {
+            if (menuItems.length === 0) {
+                await loadMenuItems();
+            }
+            menuArea.innerHTML = '';
+            
+            for (let i = 1; i <= numTables; i++) {
+                const tableMenuContainer = document.createElement('div');
+                tableMenuContainer.id = `table-${i}-menu`;
+                tableMenuContainer.classList.add('table-menu-container');
+
+                const order = loadCurrentOrder(i);
+
+                for (const item of menuItems) {
+                    const quantity = order[item.name] || 0;
+                    
+                    // 菜品项的 HTML 结构
+                    const itemDiv = document.createElement('div');
+                    itemDiv.classList.add('item');
+                    itemDiv.setAttribute('onclick', `changeQuantity('${item.name}', 1, ${i})`); 
+
+                    itemDiv.innerHTML = `
+                        <img src="${item.image || defaultPlaceholder}" alt="${item.name}" class="item-image">
+                        <div class="item-info">
+                            <h3>${item.name}</h3>
+                            <p>价格: ${item.price.toFixed(0)} Ks</p>
+                        </div>
+                        <div class="item-controls" onclick="event.stopPropagation();">
+                            <button onclick="changeQuantity('${item.name}', 1, ${i})">+</button>
+                            <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${i}" value="${quantity}" oninput="updateBill()">
+                            <button onclick="changeQuantity('${item.name}', -1, ${i})">-</button>
+                        </div>
+                    `;
+                    tableMenuContainer.appendChild(itemDiv);
+                }
+                menuArea.appendChild(tableMenuContainer);
+            }
+            // 初始显示当前桌子
+            const currentMenu = document.getElementById(`table-${currentTable}-menu`);
+            if (currentMenu) {
+                currentMenu.classList.add('active');
+            }
+        }
+
+        /** * 更改指定菜品在指定桌子的数量 (保持不变) */
+        function changeQuantity(itemName, change, tableNumber) {
+            playSound();
+            vibrateDevice();
+
+            const input = document.querySelector(`.quantity-input[data-item-name='${itemName}'][data-table-number='${tableNumber}']`);
+            if (!input) return;
+            
+            let quantity = parseInt(input.value) || 0;
+            
+            if (quantity + change >= 0) {
+                quantity += change;
+                input.value = quantity;
+                updateBill();
+            }
+        }
+
+        /** * 更新账单显示和总价，并保存当前桌子的订单到 LocalStorage (保持不变) */
+        function updateBill() {
+            const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
+            if (!currentMenuContainer) return;
+
+            const quantityInputs = currentMenuContainer.querySelectorAll('.quantity-input');
+            const orderData = {};
+            let total = 0;
+
+            // 遍历当前桌子所有菜品，计算总价并构建订单数据
+            quantityInputs.forEach(input => {
+                const itemName = input.getAttribute('data-item-name');
+                const quantity = parseInt(input.value) || 0;
+                
+                if (quantity > 0) {
+                    orderData[itemName] = quantity;
+                    const item = menuItems.find(i => i.name === itemName);
+                    if (item) {
+                        total += item.price * quantity;
+                    }
+                }
+            });
+            
+            // 更新账单明细显示
+            billDetails.innerHTML = '';
+            for (const itemName in orderData) {
+                const quantity = orderData[itemName];
+                const item = menuItems.find(i => i.name === itemName);
+                const subtotal = item.price * quantity;
+                
+                const billItemDiv = document.createElement('div');
+                billItemDiv.innerHTML = `
+                    <span>${itemName} (${item.price.toFixed(0)} Ks/份) x ${quantity}</span>
+                    <span class="item-total">${subtotal.toFixed(0)} Ks</span>
+                `;
+                billDetails.appendChild(billItemDiv);
+            }
+            
+            // 更新总价
+            totalPriceSpan.textContent = total.toFixed(0);
+            
+            // 保存订单数据到 LocalStorage
+            localStorage.setItem(`bbq_order_table_${currentTable}`, JSON.stringify(orderData));
+        }
+        
+        /** * 动态生成桌号选择下拉菜单的选项 (保持不变) */
+        function generateTableSelectors() {
+            tableDropdownContent.innerHTML = '';
+            for (let i = 1; i <= numTables; i++) {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.textContent = `${i}号桌`;
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    switchTable(i);
+                };
+                tableDropdownContent.appendChild(link);
+            }
+        }
+
+        // --- 模式切换和数据管理函数 (保持不变) ---
+
+        /**
+         * 切换到菜单编辑模式
+         */
+        async function toggleEditMode() {
+            if (isSummaryMode) return;
+            if (isEditMode) {
+                // 退出编辑模式时保存所有更改
+                await saveAllMenuItems();
+                mainContent.style.display = 'flex';
+                editContent.style.display = 'none';
+                editLink.textContent = '编辑菜单';
+                await updateUI();
+            } else {
+                mainContent.style.display = 'none';
+                editContent.style.display = 'block';
+                summaryContent.style.display = 'none';
+                editLink.textContent = '完成编辑';
+                await renderMenuEditor();
+            }
+            isEditMode = !isEditMode;
+        }
+        
+        /**
+         * 渲染菜单编辑器
+         */
+        async function renderMenuEditor() {
+            const editorBody = document.getElementById('menu-editor-body');
+            editorBody.innerHTML = '';
+            
+            for (const item of menuItems) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="text" value="${item.name}" data-id="${item.id}" class="edit-name"></td>
+                    <td><input type="number" value="${item.price}" data-id="${item.id}" class="edit-price"></td>
+                    <td>
+                        <input type="file" accept="image/*" data-id="${item.id}" class="edit-image">
+                        <img src="${item.image || defaultPlaceholder}" style="width:50px;height:50px;" class="preview-img" data-id="${item.id}">
+                    </td>
+                    <td>
+                        <button onclick="deleteMenuItem(${item.id})" style="background-color: #e74c3c;">删除</button>
+                    </td>
+                `;
+                editorBody.appendChild(row);
+            }
+
+            // 添加文件变更监听
+            const fileInputs = document.querySelectorAll('.edit-image');
+            fileInputs.forEach(input => {
+                input.addEventListener('change', handleImageUpload);
+            });
+        }
+
+        async function saveAllMenuItems() {
+            const nameInputs = document.querySelectorAll('.edit-name');
+            const priceInputs = document.querySelectorAll('.edit-price');
+            const imageInputs = document.querySelectorAll('.edit-image');
+
+            for (let i = 0; i < nameInputs.length; i++) {
+                const id = parseInt(nameInputs[i].getAttribute('data-id'));
+                const itemIndex = menuItems.findIndex(item => item.id === id);
+                if (itemIndex !== -1) {
+                    menuItems[itemIndex].name = nameInputs[i].value.trim();
+                    menuItems[itemIndex].price = parseInt(priceInputs[i].value) || 0;
+
+                    if (imageInputs[i].files.length > 0) {
+                        const file = imageInputs[i].files[0];
+                        const reader = new FileReader();
+                        await new Promise((resolve) => {
+                            reader.onload = (e) => {
+                                menuItems[itemIndex].image = e.target.result;
+                                resolve();
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                    }
+
+                    await saveMenuItemToDB(menuItems[itemIndex]);
+                }
+            }
+            alert('所有菜单项已保存');
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const id = event.target.getAttribute('data-id');
+                    const preview = document.querySelector(`.preview-img[data-id="${id}"]`);
+                    if (preview) {
+                        preview.src = e.target.result;
+                    }
+                    // 临时存储到 menuItems
+                    const itemIndex = menuItems.findIndex(item => item.id == id);
+                    if (itemIndex !== -1) {
+                        menuItems[itemIndex].image = e.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        /**
+         * 删除菜单项
+         */
+        async function deleteMenuItem(id) {
+            if (confirm("确定要删除这个菜品吗？")) {
+                const itemIndex = menuItems.findIndex(item => item.id === id);
+                if (itemIndex !== -1) {
+                    const itemName = menuItems[itemIndex].name;
+                    
+                    // 从数据库删除
+                    await deleteMenuItemFromDB(id);
+                    
+                    // 从内存中删除
+                    menuItems.splice(itemIndex, 1);
+                    
+                    alert(`菜品 "${itemName}" 已删除`);
+                    await renderMenuEditor();
+                }
+            }
+        }
+        
+        /**
+         * 添加新菜品
+         */
+        async function addNewItem() {
+            const newItem = {
+                name: "新菜品",
+                price: 1000
+            };
+            
+            // 保存到数据库
+            const id = await saveMenuItemToDB(newItem);
+            newItem.id = id;
+            
+            // 添加到内存
+            menuItems.push(newItem);
+            
+            await renderMenuEditor();
+        }
+        
+        /**
+         * 切换到历史汇总模式
+         */
+        function toggleSummaryMode() {
+            if (isEditMode) return;
+            isSummaryMode = !isSummaryMode;
+            if (isSummaryMode) {
+                mainContent.style.display = 'none';
+                editContent.style.display = 'none';
+                summaryContent.style.display = 'block';
+                summaryLink.textContent = '返回点单';
+                renderSummary();
+            } else {
+                mainContent.style.display = 'flex';
+                summaryContent.style.display = 'none';
+                summaryLink.textContent = '查看汇总';
+            }
+        }
+        
+        /**
+         * 渲染汇总数据
+         */
+        function renderSummary() {
+            const summaryContainer = document.getElementById('summary-container');
+            summaryContainer.innerHTML = '';
+            
+            let grandTotal = 0;
+            
+            // 获取所有日期键
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('bbq_orders_by_date_')) {
+                    keys.push(key);
+                }
+            }
+            
+            // 按日期排序（最新的在前）
+            keys.sort().reverse();
+            
+            if (keys.length === 0) {
+                summaryContainer.innerHTML = '<p>暂无历史订单数据</p>';
+                document.getElementById('grand-total').textContent = '总营业额: 0 Ks';
+                return;
+            }
+            
+            for (const key of keys) {
+                const date = key.replace('bbq_orders_by_date_', '');
+                const dailyOrders = JSON.parse(localStorage.getItem(key));
+                
+                let dailyTotal = 0;
+                let ordersHTML = '';
+                
+                for (const order of dailyOrders) {
+                    dailyTotal += order.total;
+                    const timestamp = new Date(order.timestamp);
+                    const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}`;
+                    
+                    let itemsHTML = '';
+                    for (const itemName in order.order) {
+                        const quantity = order.order[itemName];
+                        const item = menuItems.find(i => i.name === itemName) || { price: 0 };
+                        const subtotal = item.price * quantity;
+                        itemsHTML += `<li>${itemName} x ${quantity} = ${subtotal.toFixed(0)} Ks</li>`;
+                    }
+                    
+                    ordersHTML += `
+                        <div class="order-details">
+                            <p>桌号: ${order.table}号桌</p>
+                            <p>时间: ${timeString}</p>
+                            <ul class="order-items">${itemsHTML}</ul>
+                            <p>小计: ${order.total.toFixed(0)} Ks</p>
+                        </div>
+                    `;
+                }
+                
+                grandTotal += dailyTotal;
+                
+                const section = document.createElement('div');
+                section.className = 'daily-summary-section';
+                section.innerHTML = `
+                    <h3>${date}</h3>
+                    <p>订单数量: ${dailyOrders.length}</p>
+                    <p class="daily-total">当日总营业额: ${dailyTotal.toFixed(0)} Ks</p>
+                    ${ordersHTML}
+                `;
+                
+                summaryContainer.appendChild(section);
+            }
+            
+            document.getElementById('grand-total').textContent = `总营业额: ${grandTotal.toFixed(0)} Ks`;
+        }
+        
+        /**
+         * 导出到Excel
+         */
+        function exportToExcel() {
+            const data = [];
+            data.push(['日期', '桌号', '时间', '菜品', '数量', '单价', '小计', '订单总计']);
+            
+            // 获取所有日期键
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('bbq_orders_by_date_')) {
+                        keys.push(key);
+                    }
+                }
+                
+                keys.sort().reverse();
+                
+                for (const key of keys) {
+                    const date = key.replace('bbq_orders_by_date_', '');
+                    const dailyOrders = JSON.parse(localStorage.getItem(key));
+                    
+                    for (const order of dailyOrders) {
+                        const timestamp = new Date(order.timestamp);
+                        const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
+                        
+                        let hasItems = false;
+                        for (const itemName in order.order) {
+                            hasItems = true;
+                            const quantity = order.order[itemName];
+                            const item = menuItems.find(i => i.name === itemName) || { price: 0 };
+                            const subtotal = item.price * quantity;
+                            data.push([date, order.table, timeString, itemName, quantity, item.price, subtotal, '']);
+                        }
+                        if (hasItems) {
+                            data[data.length - 1][7] = order.total; // 在最后一个项添加订单总计
+                        } else {
+                            data.push([date, order.table, timeString, '', '', '', '', order.total]);
+                        }
+                    }
+                }
+                
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "历史账单");
+                
+                XLSX.writeFile(wb, '历史账单.xlsx');
+            }
+            
+            /**
+             * 清空所有历史账单
+             */
+            function clearAllHistory() {
+                if (confirm("确定要清空所有历史账单吗？此操作不可恢复！")) {
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith('bbq_orders_by_date_')) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    
+                    for (const key of keysToRemove) {
+                        localStorage.removeItem(key);
+                    }
+                    
+                    alert("所有历史账单已清空");
+                    renderSummary();
+                }
+            }
+
+            /** * 统一更新用户界面 */
+            async function updateUI() {
+                await loadMenuItems();
+                await renderAllMenus();
+                updateBill();
+                settleButton.textContent = `结算并清空${currentTable}号桌`;
+            }
+
+            /** * 应用程序初始化函数 */
+            async function initializeUI() {
+                await openDB();
+                await loadMenuItems();
+                generateTableSelectors();
+                await renderAllMenus();
+                updateBill();
+                
+                settleButton.textContent = `结算并清空${currentTable}号桌`;
+            }
+
+            // 绑定 DOMContentLoaded 事件
+            document.addEventListener('DOMContentLoaded', () => {
+                initializeUI();
+            });
+    </script>
+</body>
+</html>
