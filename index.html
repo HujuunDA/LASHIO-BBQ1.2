@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.13.16.29</title>
+    <title>烧烤账单计算器10.13.16.39</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -1000,31 +1000,33 @@
             imgElement.src = imageUrl;
 
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const supportsShare = !!navigator.share;
             
-            // 重置按钮和提示
-            shareButton.setAttribute('onclick', 'handleSharePrint()'); // 默认使用 Web Share
+            // ** 1. 统一按钮文本 **
+            shareButton.textContent = '分享 / 打印'; 
             
-            if (navigator.share) {
-                // 支持 Web Share API (iOS/部分Android)
-                shareButton.textContent = '分享 / 打印 (系统功能)';
-                tipElement.innerHTML = `<span style="color:#27ae60; font-weight: bold;">点击“分享/打印”，使用系统功能进行打印或分享到第三方App。</span>`;
+            if (supportsShare) {
+                // 2. Web Share API 可用 (最佳情况：可能是 Android 或 iOS 的 HTTPS 链接)
+                shareButton.setAttribute('onclick', 'handleSharePrint()'); // 尝试 Web Share
+                tipElement.innerHTML = `<span style="color:#27ae60; font-weight: bold;">点击按钮，直接调用系统分享菜单。</span>`;
+
             } else if (isIOS) {
-                 // iOS 不支持 Web Share 但可能支持打印，或需要用户长按
-                shareButton.textContent = '直接打印 (浏览器)';
-                // 绑定到浏览器原生打印，虽然不能分享，但至少能打印
+                // 3. iOS HTTP/Safari 限制：Web Share 失败，强制走打印流程，引导用户在打印界面内分享。
                 shareButton.setAttribute('onclick', 'window.print()'); 
-                tipElement.innerHTML = `<span style="color:#e74c3c;">iOS (非安全连接)：请使用“直接打印”或长按图片手动保存。</span>`;
+                tipElement.innerHTML = `<span style="color:#e74c3c; font-weight: bold;">**针对 iOS (HTTP)：** 点击按钮将打开浏览器打印界面。**请在打印预览界面，点击右上角分享按钮**，即可发送给打印App。</span>`;
+                
             } else {
-                // Android / PC (不支持 Web Share API)
-                shareButton.textContent = '手动保存 / 打印';
-                tipElement.innerHTML = `Android/PC：长按或右键图片保存。点击按钮可调用浏览器打印。`;
+                // 4. Android / PC (Web Share 不可用)
+                // Fallback to print, which often meets the user's need on Android.
                 shareButton.setAttribute('onclick', 'window.print()');
+                tipElement.innerHTML = `Android/PC：点击按钮调用浏览器打印。若需保存，请长按或右键图片。`;
             }
 
             modal.style.display = 'flex'; // 使用 flex 使模态框居中
             modal.style.alignItems = 'center';
             modal.style.justifyContent = 'center';
         }
+
         
         /**
          * 关闭模态框
@@ -1303,9 +1305,8 @@
         // --- 菜单编辑和数据管理函数 ---
 
         /**
-         * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB。
+         * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB，
          * 图片字段依赖 handleImageUpload 提前更新内存数据。
-         * @param {boolean} silent - 是否静默执行（不显示 alert）。
          */
         async function saveCurrentEditsAndPersist(silent = false) {
             const nameInputs = document.querySelectorAll('.edit-name');
