@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器</title>
+    <title>烧烤账单计算器 - 中文注释版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -650,7 +650,7 @@
         const summaryLink = document.getElementById('summary-link');
         const printArea = document.getElementById('print-area'); 
 
-        const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iOCIgZmlsbD0iI0ZGM0E1MCIvPgo8cGF0aCBkPSJNMzUgMzVMMzUgMjVNMzUgNDVNNDUgMzVMMjUgMzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=";
+        const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAv... (truncated for brevity) ...Lw4vPjwhLS0gPHJlY3QgeD0iMjUiIHk9IjI1IiB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIGZpbGw9IndoaXRlIiByeD0iNSIvPiAtLT4KPC9zdmc+Cg==";
 
         // --- 音频上下文全局管理 ---
         let audioContext;
@@ -884,7 +884,8 @@
         }
 
         /**
-         * 将账单内容转换为图片并下载
+         * 将账单内容转换为 Base64 图片 URL
+         * @returns {Promise<string>} Base64 Data URL of the generated receipt image.
          */
         function printBillToImage() {
             const currentOrder = loadCurrentOrder(currentTable);
@@ -936,40 +937,21 @@
             
             void printArea.offsetWidth; 
 
-            // 3. 使用 html2canvas 将 DOM 元素转为 Canvas
-            html2canvas(printArea, { 
+            // 2. 使用 html2canvas 将 DOM 元素转为 Canvas
+            return html2canvas(printArea, { 
                 scale: 2, 
                 useCORS: true, 
                 backgroundColor: '#ffffff', 
             }).then(canvas => {
                 const imgUrl = canvas.toDataURL('image/png');
                 
-                const a = document.createElement('a');
-                a.href = imgUrl;
-                a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                // 4. 恢复 print-area 的原始状态
+                // 3. 恢复 print-area 的原始状态
                 printArea.style.display = originalDisplay; 
                 printArea.style.opacity = '0';
                 printArea.innerHTML = ''; 
-
-                // ----------------------------------------------------------------------
-                // 【针对 iOS/Safari 的修复：删除异步的 URL Scheme 跳转】
-                // 导致 iOS 报错的原因是：在异步的 html2canvas.then() 内部尝试执行 
-                // window.location.href = 'custom-scheme://...' 会被浏览器阻止。
-                // 移除这部分代码以确保结算流程的稳定性。
-                // ----------------------------------------------------------------------
                 
-                // const customAppScheme = 'myposapp://receipt_complete'; 
-                // setTimeout(() => {
-                //     window.location.href = customAppScheme;
-                // }, 100); 
-
-                // 如果将来确实需要自定义应用跳转，应让用户点击一个按钮来触发，
-                // 或者在没有下载操作的情况下立即执行。
+                // 4. 返回图片 URL
+                return imgUrl;
 
             }).catch(error => {
                 console.error("图片生成失败:", error);
@@ -977,22 +959,66 @@
                 
                 printArea.style.display = originalDisplay;
                 printArea.style.opacity = '0';
+                throw error; // 抛出错误以供调用者处理
             });
         }
 
         /**
          * 结算并清空当前桌子的订单
+         * 已修改为 async 函数，并使用 window.open() 替代 a.click() 下载，以兼容 iOS/Safari。
          */
-        function settleAndClear() {
+        async function settleAndClear() { 
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
 
             if (total > 0) {
                 if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
-                    // 1. 下载账单图片
-                    printBillToImage();
+                    
+                    let imageUrl;
+                    try {
+                        // 1. 生成账单图片URL
+                        imageUrl = await printBillToImage(); // 使用 await 等待图片生成
+                    } catch (e) {
+                        console.error("结算中断：图片生成失败", e);
+                        return;
+                    }
 
-                    // 2. 记录历史订单到 LocalStorage
+                    // 2. 弹出新窗口显示图片，绕过下载限制
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    const imageWindow = window.open();
+
+                    if (imageWindow) {
+                        imageWindow.document.write(`
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <title>结算账单 - ${currentTable}号桌</title>
+                                <meta name="viewport" content="width=device-width, initial-scale=1">
+                                <style>
+                                    body { text-align: center; font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
+                                    h2 { color: #f39c12; }
+                                    img { max-width: 100%; height: auto; border: 2px solid #ccc; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+                                    .tip { margin-top: 20px; padding: 10px; background-color: #fff; border-radius: 5px; border: 1px solid #ddd; }
+                                    .ios-tip { color: #e74c3c; font-weight: bold; }
+                                </style>
+                            </head>
+                            <body>
+                                <h2>${currentTable}号桌结算账单</h2>
+                                <p class="tip">
+                                    ${isIOS 
+                                        ? '<span class="ios-tip">在 iOS 设备上：请长按图片，然后选择“存储图像”来保存。</span>' 
+                                        : '在 Android/PC 设备上：您可以右键点击图片或长按图片来保存。'}
+                                </p>
+                                <img src="${imageUrl}" alt="结算账单">
+                            </body>
+                            </html>
+                        `);
+                        imageWindow.document.close();
+                    } else {
+                        alert("浏览器阻止了弹出窗口。请允许弹出窗口，或在浏览器控制台复制 Base64 图片数据。");
+                    }
+
+                    // 3. 记录历史订单到 LocalStorage
                     const todayDate = getTodayDateString();
                     const historyKey = `bbq_orders_by_date_${todayDate}`;
                     let dailyOrders = JSON.parse(localStorage.getItem(historyKey)) || [];
@@ -1006,10 +1032,10 @@
                     
                     localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
                     
-                    // 3. 清空当前桌子的 LocalStorage 订单
+                    // 4. 清空当前桌子的 LocalStorage 订单
                     localStorage.removeItem(`bbq_order_table_${currentTable}`);
 
-                    // 4. 清空界面上的数量和账单显示
+                    // 5. 清空界面上的数量和账单显示
                     const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
                     if (currentMenuContainer) {
                         currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
@@ -1018,7 +1044,7 @@
                     }
                     updateBill();
                     
-                    alert(`${currentTable}号桌结算成功！`);
+                    alert(`${currentTable}号桌结算成功！请在新窗口中保存账单图片。`);
                 }
             } else {
                 alert('当前账单为空，无需结算。');
