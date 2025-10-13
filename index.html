@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.13.16.52</title>
+    <title>烧烤账单计算器10.13.17.06</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -419,6 +419,18 @@
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             backdrop-filter: blur(10px);
+        }
+        /* New: Scale down Menu Editor on small screens (max-width: 767px) */
+        @media (max-width: 767px) {
+            #edit-content {
+                /* Scale to 80% */
+                transform: scale(0.8);
+                /* Scale from the top center */
+                transform-origin: top center;
+                /* Compensate for scaling to roughly center it and prevent unnecessary horizontal scrollbar on some devices */
+                width: 125%; 
+                margin-left: -12.5%; 
+            }
         }
         
         .menu-editor-container table {
@@ -876,6 +888,9 @@
             }
 
             currentTable = tableNumber;
+            // ADDED: 保存当前桌号到 LocalStorage
+            localStorage.setItem('bbq_last_table', currentTable);
+
             tableSelectorDropbtn.textContent = `${currentTable}号桌`;
             settleButton.textContent = `结算并清空${tableNumber}号桌`;
 
@@ -952,7 +967,7 @@
                 a.href = imgUrl;
                 a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
                 document.body.appendChild(a);
-                a.click(); // 触发下载
+                a.click();
                 document.body.removeChild(a);
                 
                 // 4. 恢复 print-area 的原始状态
@@ -960,13 +975,11 @@
                 printArea.style.opacity = '0';
                 printArea.innerHTML = ''; 
 
-                // 5. 移除尝试打开自定义应用程序的逻辑，满足用户“其他显示什么就不需要了”的要求
-                /*
+                // 5. 尝试打开自定义应用程序 (如果需要，请替换 URL Scheme)
                 const customAppScheme = 'myposapp://receipt_complete'; 
                 setTimeout(() => {
                     window.location.href = customAppScheme;
                 }, 100); 
-                */
 
             }).catch(error => {
                 console.error("图片生成失败:", error);
@@ -978,44 +991,45 @@
         }
 
         /**
-         * 结算并清空当前桌子的订单 (已移除确认弹窗和结算成功提示)
+         * 结算并清空当前桌子的订单
          */
         function settleAndClear() {
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
 
             if (total > 0) {
-                
-                // 1. 下载账单图片 (图片保存动作已包含在 printBillToImage 中)
-                printBillToImage();
+                if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
+                    // 1. 下载账单图片
+                    printBillToImage();
 
-                // 2. 记录历史订单到 LocalStorage
-                const todayDate = getTodayDateString();
-                const historyKey = `bbq_orders_by_date_${todayDate}`;
-                let dailyOrders = JSON.parse(localStorage.getItem(historyKey)) || [];
-                
-                dailyOrders.push({
-                    table: currentTable,
-                    timestamp: new Date().toISOString(),
-                    order: currentOrder,
-                    total: total
-                });
-                
-                localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
-                
-                // 3. 清空当前桌子的 LocalStorage 订单
-                localStorage.removeItem(`bbq_order_table_${currentTable}`);
-
-                // 4. 清空界面上的数量和账单显示
-                const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
-                if (currentMenuContainer) {
-                    currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
-                        input.value = 0;
+                    // 2. 记录历史订单到 LocalStorage
+                    const todayDate = getTodayDateString();
+                    const historyKey = `bbq_orders_by_date_${todayDate}`;
+                    let dailyOrders = JSON.parse(localStorage.getItem(historyKey)) || [];
+                    
+                    dailyOrders.push({
+                        table: currentTable,
+                        timestamp: new Date().toISOString(),
+                        order: currentOrder,
+                        total: total
                     });
+                    
+                    localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
+                    
+                    // 3. 清空当前桌子的 LocalStorage 订单
+                    localStorage.removeItem(`bbq_order_table_${currentTable}`);
+
+                    // 4. 清空界面上的数量和账单显示
+                    const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
+                    if (currentMenuContainer) {
+                        currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
+                            input.value = 0;
+                        });
+                    }
+                    updateBill();
+                    
+                    alert(`${currentTable}号桌结算成功！`);
                 }
-                updateBill();
-                
-                // 移除了 alert(`${currentTable}号桌结算成功！`); 
             } else {
                 alert('当前账单为空，无需结算。');
             }
@@ -1522,6 +1536,15 @@
                 await openDB();
                 await loadMenuItems();
                 generateTableSelectors();
+                
+                // ADDED: 加载上次保存的桌号，如果不存在则默认为 1
+                const lastTable = localStorage.getItem('bbq_last_table');
+                if (lastTable && !isNaN(parseInt(lastTable))) {
+                    currentTable = parseInt(lastTable);
+                } else {
+                    currentTable = 1; // Default to 1 if not found or invalid
+                }
+                
                 await renderAllMenus();
                 updateBill();
                 
