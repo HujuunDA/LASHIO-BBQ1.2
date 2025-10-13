@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.13.17.24</title>
+    <title>烧烤账单计算器 - 中文注释版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -626,7 +626,7 @@
         
         // --- 全局变量和元素引用 ---
         let menuItems = [];
-        const numTables = 10;
+        const numTables = 1; // <--- 关键修改：将桌子数量限制为 1
         let currentTable = 1;
         
         let isEditMode = false;
@@ -640,8 +640,6 @@
         const billDetails = document.getElementById('bill-details');
         const totalPriceSpan = document.getElementById('total-price');
         const settleButton = document.getElementById('settle-button');
-        // const tableSelectorDropbtn = document.getElementById('table-selector-dropbtn'); // 已移除
-        // const tableDropdownContent = document.getElementById('table-dropdown-content'); // 已移除
         const editLink = document.getElementById('edit-link');
         const summaryLink = document.getElementById('summary-link');
         const printArea = document.getElementById('print-area'); 
@@ -855,6 +853,7 @@
 
         /**
          * 从 LocalStorage 加载指定桌子的当前订单
+         * 注：由于 numTables=1，tableNumber 始终为 1
          */
         function loadCurrentOrder(tableNumber) {
             const savedOrder = localStorage.getItem(`bbq_order_table_${tableNumber}`);
@@ -863,8 +862,11 @@
 
         // --- 核心点单逻辑函数 ---
         
-        /** * 切换当前操作的桌号 */
+        /** * 切换当前操作的桌号 
+         * 注：由于 numTables=1，此函数主要用于初始化和更新显示
+        */
         async function switchTable(tableNumber) {
+            // 由于只有 1 号桌，此函数实际不会切换容器，但保留了更新显示逻辑
             if (isEditMode || isSummaryMode) return;
             
             // 切换菜单容器的显示状态
@@ -985,7 +987,8 @@
             const total = calculateTotal(currentOrder);
 
             if (total > 0) {
-                if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
+                // 由于只有 1 号桌，直接确认结算
+                if (confirm(`确定要结算并清空1号桌账单吗？该订单将被记录在历史中。`)) {
                     // 1. 下载账单图片
                     printBillToImage();
 
@@ -1003,7 +1006,7 @@
                     
                     localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
                     
-                    // 3. 清空当前桌子的 LocalStorage 订单
+                    // 3. 清空当前桌子的 LocalStorage 订单 (即 1 号桌)
                     localStorage.removeItem(`bbq_order_table_${currentTable}`);
 
                     // 4. 清空界面上的数量和账单显示
@@ -1015,7 +1018,7 @@
                     }
                     updateBill();
                     
-                    alert(`${currentTable}号桌结算成功！`);
+                    alert(`1号桌结算成功！`);
                 }
             } else {
                 alert('当前账单为空，无需结算。');
@@ -1040,7 +1043,7 @@
                 return acc;
             }, {});
             
-            // 2. Render for each table
+            // 2. Render for each table (循环只会运行 i=1 一次)
             for (let i = 1; i <= numTables; i++) {
                 const tableMenuContainer = document.createElement('div');
                 tableMenuContainer.id = `table-${i}-menu`;
@@ -1095,7 +1098,7 @@
                 
                 menuArea.appendChild(tableMenuContainer);
             }
-            // 初始显示当前桌子
+            // 初始显示当前桌子 (始终是 1 号桌)
             const currentMenu = document.getElementById(`table-${currentTable}-menu`);
             if (currentMenu) {
                 currentMenu.classList.add('active');
@@ -1165,10 +1168,7 @@
             localStorage.setItem(`bbq_order_table_${currentTable}`, JSON.stringify(orderData));
         }
         
-        /**
-         * 动态生成桌号选择下拉菜单的选项
-         * **此函数已被删除，功能已由静态元素取代。**
-         */
+        /** * 动态生成桌号选择下拉菜单的选项 * **此函数已被删除，功能已由静态元素取代。** */
 
         // --- 菜单编辑和数据管理函数 ---
 
