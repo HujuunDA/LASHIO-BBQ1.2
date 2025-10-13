@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器 - 中文注释版</title>
+    <title>烧烤账单计算器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         /* ----------------------- CSS 样式区 - 界面布局和美化 ----------------------- */
         
@@ -32,7 +31,7 @@
             transition: opacity 0.4s ease-in-out;
         }
         .table-menu-container.active {
-            display: block;
+            display: block; /* 使用 block 布局，以便分类部分可以垂直堆叠 */
             opacity: 1;
         }
         
@@ -214,19 +213,73 @@
             font-weight: 600;
         }
 
-        /* ----------------------- 菜品项样式 ----------------------- */
-        .item {
+        /* ----------------------- 菜品分类样式 ----------------------- */
+        .category-section {
+            margin-top: 25px;
+            border: 1px solid #ffc3a0;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+
+        .category-header {
+            background-color: #ff7e5f;
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+            cursor: default;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding: 15px;
+        }
+
+        .category-content {
+            padding: 10px;
+            /* 使用 Flexbox 布局项目，方便在分类内多列显示 */
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 15px; /* 项目之间的间隔 */
+        }
+
+        /* Hide the first top margin to prevent double spacing */
+        .category-section:first-child {
+            margin-top: 0;
+        }
+
+        /* ----------------------- 菜品项样式 (正方形卡片) ----------------------- */
+        
+        .item {
+            /* 默认两列，减去 gap */
+            flex: 1 1 calc(50% - 7.5px); 
+            max-width: calc(50% - 7.5px);
+
+            /* 内部布局改为垂直，以便图片/信息/数量堆叠，形成方块感 */
+            flex-direction: column; 
+            align-items: center; /* 居中对齐 */
+            text-align: center;
+            
+            padding: 10px; 
             background-color: rgba(255, 255, 255, 0.6);
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             backdrop-filter: blur(10px);
             cursor: pointer;
+            box-sizing: border-box; /* 确保 padding 包含在宽度内 */
+        }
+
+        @media (min-width: 768px) {
+            .item {
+                flex: 1 1 calc(33.333% - 10px); /* 桌面端三列 */
+                max-width: calc(33.333% - 10px);
+            }
+        }
+        @media (min-width: 1024px) {
+            .item {
+                flex: 1 1 calc(25% - 11.25px); /* 宽屏四列 */
+                max-width: calc(25% - 11.25px);
+            }
         }
 
         .item:hover {
@@ -235,39 +288,57 @@
         }
         
         .item-image {
-            width: 70px;
-            height: 70px;
+            width: 90px; /* 增加尺寸，增强方块感 */
+            height: 90px;
             object-fit: cover;
-            border-radius: 8px;
-            margin-right: 15px;
-            border: 2px solid #ffc3a0;
+            border-radius: 12px;
+            margin-right: 0; 
+            margin-bottom: 10px;
+            border: 2px solid #ff7e5f;
             pointer-events: none;
         }
 
         .item-info {
-            flex-grow: 1;
+            flex-grow: 0;
+            margin-bottom: 10px;
             pointer-events: none;
+            min-width: 0;
+        }
+        
+        .item-info h3 {
+            font-size: 1em;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
 
-        /* 数量控制区：垂直布局 */
+        .item-info p {
+            font-size: 0.9em;
+            margin: 0;
+        }
+
+        /* 数量控制区：改为水平排列，更紧凑 */
         .item-controls {
             display: flex;
-            flex-direction: column;
+            flex-direction: row; /* 水平排列 */
             align-items: center;
+            justify-content: center; /* 确保加减按钮组居中显示 */
             background-color: rgba(255, 255, 255, 0.8);
             border-radius: 10px;
-            padding: 5px;
+            padding: 3px;
             backdrop-filter: blur(10px);
             pointer-events: auto;
         }
 
         .item-controls input {
-            width: 40px;
+            width: 30px; 
             text-align: center;
-            margin: 5px 0;
+            margin: 0 5px; 
             border: none;
             background-color: transparent;
-            font-size: 1.1em;
+            font-size: 1em;
             font-weight: 600;
         }
         
@@ -275,12 +346,12 @@
             background-color: #ff7e5f;
             color: white;
             border: none;
-            padding: 8px 12px;
+            padding: 0;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 1.2em;
-            width: 32px;
-            height: 32px;
+            font-size: 1em;
+            width: 25px; 
+            height: 25px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -499,7 +570,7 @@
 
     <div id="main-content" class="main-container">
         <div class="container">
-            <div id="menu-area"></div>
+            <div id="menu-area"></div> 
         </div>
         
         <div class="bill-details-wrapper">
@@ -525,7 +596,7 @@
                 <tr>
                     <th>名称</th>
                     <th>价格</th>
-                    <th>图片</th>
+                    <th>分类</th> <th>图片</th>
                     <th>操作</th>
                 </tr>
             </thead>
@@ -581,7 +652,21 @@
 
         const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iOCIgZmlsbD0iI0ZGM0E1MCIvPgo8cGF0aCBkPSJNMzUgMzVMMzUgMjVNMzUgNDVNNDUgMzVMMjUgMzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=";
 
-        // --- IndexedDB 数据库操作函数 (保持不变) ---
+        // --- 音频上下文全局管理 (修复关键点 1) ---
+        let audioContext;
+
+        /** * 确保 AudioContext 在用户交互后处于活动状态 */
+        function initAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.error("AudioContext 初始化失败:", e);
+                }
+            }
+        }
+
+        // --- IndexedDB 数据库操作函数 ---
 
         /** * 打开或创建 IndexedDB 数据库 */
         function openDB() {
@@ -643,17 +728,19 @@
             });
         }
 
-        // 初始化默认菜单项
+        /** * 初始化默认菜单项 */
         async function initializeDefaultMenu() {
             const defaultMenu = [
-                { name: "羊肉串", price: 2000 },
-                { name: "牛肉串", price: 2500 },
-                { name: "鸡翅", price: 3000 },
-                { name: "烤鱼", price: 5000 },
-                { name: "烤虾", price: 4000 },
-                { name: "烤玉米", price: 1500 },
-                { name: "烤茄子", price: 2000 },
-                { name: "烤韭菜", price: 1500 }
+                { name: "羊肉串", price: 2000, category: "肉类" },
+                { name: "牛肉串", price: 2500, category: "肉类" },
+                { name: "鸡翅", price: 3000, category: "肉类" },
+                { name: "烤鱼", price: 5000, category: "海鲜/水产" },
+                { name: "烤虾", price: 4000, category: "海鲜/水产" },
+                { name: "烤玉米", price: 1500, category: "素菜" },
+                { name: "烤茄子", price: 2000, category: "素菜" },
+                { name: "啤酒", price: 3500, category: "酒水/饮料" },
+                { name: "可乐", price: 1000, category: "酒水/饮料" },
+                { name: "烤韭菜", price: 1500, category: "素菜" }
             ];
             
             if (!db) await openDB();
@@ -661,7 +748,11 @@
             const store = transaction.objectStore(menuStoreName);
             
             for (const item of defaultMenu) {
-                store.add(item);
+                if (!item.id) {
+                    store.add(item);
+                } else {
+                    store.put(item);
+                }
             }
             
             return defaultMenu;
@@ -682,29 +773,49 @@
             }
         }
 
-        // --- 辅助工具函数 (保持不变) ---
+        // --- 辅助工具函数 ---
 
         /**
-         * 播放音效（用于点单反馈）
+         * 播放音效（用于点单反馈） (修复关键点 2 & 3)
          */
         function playSound() {
-            // 简化的音效实现
+            if (!audioContext || audioContext.state === 'suspended') {
+                initAudioContext(); // 尝试初始化或恢复上下文
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume().catch(e => console.error("AudioContext 恢复失败:", e));
+                }
+            }
+
+            if (!audioContext || audioContext.state !== 'running') {
+                console.log("AudioContext 无法运行，跳过播放音效。");
+                return;
+            }
+
             try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                // 确保每次都使用当前的 audioContext
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
                 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 
-                oscillator.frequency.value = 800;
-                gainNode.gain.value = 0.1;
+                oscillator.type = 'sine'; // 使用正弦波
+                oscillator.frequency.value = 800; // 频率 800 Hz
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
                 
+                // 播放 0.05 秒，然后渐出
                 oscillator.start();
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
-                oscillator.stop(audioContext.currentTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+                oscillator.stop(audioContext.currentTime + 0.05);
+
+                // 移除引用，允许垃圾回收
+                oscillator.onended = () => {
+                    oscillator.disconnect();
+                    gainNode.disconnect();
+                };
+
             } catch (e) {
-                console.log("音频播放失败:", e);
+                console.error("音频播放失败:", e);
             }
         }
 
@@ -752,8 +863,8 @@
         }
 
         // --- 核心点单逻辑函数 ---
-
-        /** * 切换当前操作的桌号 (保持不变) */
+        
+        /** * 切换当前操作的桌号 */
         async function switchTable(tableNumber) {
             if (isEditMode || isSummaryMode) return;
             
@@ -768,24 +879,22 @@
             tableSelectorDropbtn.textContent = `${currentTable}号桌`;
             settleButton.textContent = `结算并清空${tableNumber}号桌`;
 
-            // 延迟切换，确保动画平滑
             setTimeout(() => {
                 if (nextMenuContainer) {
                     nextMenuContainer.classList.add('active');
                 }
-                updateBill(); // 切换桌子后立即更新账单
+                updateBill(); 
             }, 100);
         }
 
         /**
-         * 将账单内容转换为图片并下载 (已优化 iOS 兼容性，并移除了无效的 App 跳转)
+         * 将账单内容转换为图片并下载
          */
         function printBillToImage() {
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
             const todayDate = getTodayDateString();
             
-            // 获取当前时间
             const now = new Date();
             const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             
@@ -800,7 +909,6 @@
                 <hr>
             `;
             
-            // 添加订单项目
             for (const itemName in currentOrder) {
                 const quantity = currentOrder[itemName];
                 const item = menuItems.find(i => i.name === itemName);
@@ -821,80 +929,54 @@
                     <span>总计：</span>
                     <span>${total.toFixed(0)} Ks</span>
                 </div>
-                <p style="text-align:center; margin-top: 15px; font-size: 10px;">-- 感谢您的光临 --</p> 
             `;
             
             printArea.innerHTML = printContent;
             
-            // 2. 临时设置 print-area 样式
             const originalDisplay = printArea.style.display;
+            
             printArea.style.display = 'block'; 
             printArea.style.opacity = '1';
+            
             void printArea.offsetWidth; 
 
             // 3. 使用 html2canvas 将 DOM 元素转为 Canvas
             html2canvas(printArea, { 
                 scale: 2, 
                 useCORS: true, 
-                backgroundColor: '#ffffff',
+                backgroundColor: '#ffffff', 
             }).then(canvas => {
-                // 将 Canvas 转换为图片 URL (data URL)
                 const imgUrl = canvas.toDataURL('image/png');
+                
+                const a = document.createElement('a');
+                a.href = imgUrl;
+                a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
                 
                 // 4. 恢复 print-area 的原始状态
                 printArea.style.display = originalDisplay; 
                 printArea.style.opacity = '0';
                 printArea.innerHTML = ''; 
 
-                // 5. 【核心判断】检查是否为 iOS 设备 (用于区分下载行为)
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                
-                if (isIOS) {
-                    // --- iOS 特殊处理：打开新窗口显示图片并提示用户长按保存 ---
-                    const newWindow = window.open();
-                    newWindow.document.write(`
-                        <html lang="zh-CN">
-                        <head>
-                            <title>账单图片 - 请长按保存</title>
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-                            <style>
-                                body { background: #f0f0f0; margin: 0; padding: 20px; text-align: center; }
-                                p { font-size: 18px; color: #333; margin-top: 50px; }
-                                img { max-width: 90%; height: auto; border: 1px solid #ccc; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-                                .tip { color: #e74c3c; font-weight: bold; margin-bottom: 20px; }
-                            </style>
-                        </head>
-                        <body>
-                            <p class="tip">【重要提示】请长按下方图片，然后选择“存储图像”保存到相册！</p>
-                            <img src="${imgUrl}" alt="账单图片">
-                        </body>
-                        </html>
-                    `);
-                    newWindow.document.close();
-                } else {
-                    // --- Android/PC 标准下载处理 ---
-                    const a = document.createElement('a');
-                    a.href = imgUrl;
-                    a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                }
-                
-                // 移除原有的 window.location.href = customAppScheme; 调用，解决 Safari 的网址无效错误。
+                // 5. 尝试打开自定义应用程序 (如果需要，请替换 URL Scheme)
+                const customAppScheme = 'myposapp://receipt_complete'; 
+                setTimeout(() => {
+                    window.location.href = customAppScheme;
+                }, 100); 
 
             }).catch(error => {
                 console.error("图片生成失败:", error);
                 alert("图片生成失败，请检查浏览器控制台。");
                 
-                // 确保在出错时也恢复状态
                 printArea.style.display = originalDisplay;
                 printArea.style.opacity = '0';
             });
         }
 
         /**
-         * 结算并清空当前桌子的订单 (调用 printBillToImage)
+         * 结算并清空当前桌子的订单
          */
         function settleAndClear() {
             const currentOrder = loadCurrentOrder(currentTable);
@@ -902,7 +984,7 @@
 
             if (total > 0) {
                 if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
-                    // 1. 下载账单图片 (替代了打印)
+                    // 1. 下载账单图片
                     printBillToImage();
 
                     // 2. 记录历史订单到 LocalStorage
@@ -938,42 +1020,77 @@
             }
         }
         
-        /** * 预加载并渲染所有桌子的菜单界面 (保持不变) */
+        /** * 预加载并渲染所有桌子的菜单界面 */
         async function renderAllMenus() {
             if (menuItems.length === 0) {
                 await loadMenuItems();
             }
             menuArea.innerHTML = '';
+
+            // 1. Group items by category
+            const categorizedItems = menuItems.reduce((acc, item) => {
+                // 使用 category 字段进行分组，如果没有则默认为 "其他"
+                const category = item.category && item.category.trim() !== '' ? item.category.trim() : "其他"; 
+                if (!acc[category]) {
+                    acc[category] = [];
+                }
+                acc[category].push(item);
+                return acc;
+            }, {});
             
+            // 2. Render for each table
             for (let i = 1; i <= numTables; i++) {
                 const tableMenuContainer = document.createElement('div');
                 tableMenuContainer.id = `table-${i}-menu`;
                 tableMenuContainer.classList.add('table-menu-container');
 
                 const order = loadCurrentOrder(i);
+                
+                // 3. Render items grouped by category
+                const sortedCategories = Object.keys(categorizedItems).sort();
 
-                for (const item of menuItems) {
-                    const quantity = order[item.name] || 0;
+                for (const category of sortedCategories) {
+                    const categorySection = document.createElement('div');
+                    categorySection.className = 'category-section';
+
+                    // 分类标题
+                    const header = document.createElement('div');
+                    header.className = 'category-header';
+                    header.innerHTML = `<span>${category} (${categorizedItems[category].length} 项)</span>`; 
+                    categorySection.appendChild(header);
+
+                    // 分类下的菜品内容 (使用 category-content 容器启用 Flexbox)
+                    const content = document.createElement('div');
+                    content.className = 'category-content';
+
+                    for (const item of categorizedItems[category]) {
+                        const quantity = order[item.name] || 0;
+                        
+                        // 菜品项的 HTML 结构 (使用正方形卡片样式)
+                        const itemDiv = document.createElement('div');
+                        itemDiv.classList.add('item');
+                        // 点击菜品项任意非控制区域，数量 +1
+                        itemDiv.setAttribute('onclick', `changeQuantity('${item.name}', 1, ${i})`); 
+
+                        itemDiv.innerHTML = `
+                            <img src="${item.image || defaultPlaceholder}" alt="${item.name}" class="item-image">
+                            <div class="item-info">
+                                <h3>${item.name}</h3>
+                                <p>价格: ${item.price.toFixed(0)} Ks</p>
+                            </div>
+                            <div class="item-controls" onclick="event.stopPropagation();">
+                                <button onclick="changeQuantity('${item.name}', 1, ${i})">+</button>
+                                <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${i}" value="${quantity}" oninput="updateBill()">
+                                <button onclick="changeQuantity('${item.name}', -1, ${i})">-</button>
+                            </div>
+                        `;
+                        content.appendChild(itemDiv);
+                    }
                     
-                    // 菜品项的 HTML 结构
-                    const itemDiv = document.createElement('div');
-                    itemDiv.classList.add('item');
-                    itemDiv.setAttribute('onclick', `changeQuantity('${item.name}', 1, ${i})`); 
-
-                    itemDiv.innerHTML = `
-                        <img src="${item.image || defaultPlaceholder}" alt="${item.name}" class="item-image">
-                        <div class="item-info">
-                            <h3>${item.name}</h3>
-                            <p>价格: ${item.price.toFixed(0)} Ks</p>
-                        </div>
-                        <div class="item-controls" onclick="event.stopPropagation();">
-                            <button onclick="changeQuantity('${item.name}', 1, ${i})">+</button>
-                            <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${i}" value="${quantity}" oninput="updateBill()">
-                            <button onclick="changeQuantity('${item.name}', -1, ${i})">-</button>
-                        </div>
-                    `;
-                    tableMenuContainer.appendChild(itemDiv);
+                    categorySection.appendChild(content);
+                    tableMenuContainer.appendChild(categorySection);
                 }
+                
                 menuArea.appendChild(tableMenuContainer);
             }
             // 初始显示当前桌子
@@ -983,7 +1100,7 @@
             }
         }
 
-        /** * 更改指定菜品在指定桌子的数量 (保持不变) */
+        /** * 更改指定菜品在指定桌子的数量 */
         function changeQuantity(itemName, change, tableNumber) {
             playSound();
             vibrateDevice();
@@ -1000,11 +1117,12 @@
             }
         }
 
-        /** * 更新账单显示和总价，并保存当前桌子的订单到 LocalStorage (保持不变) */
+        /** * 更新账单显示和总价，并保存当前桌子的订单到 LocalStorage */
         function updateBill() {
             const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
             if (!currentMenuContainer) return;
 
+            // 注意：因为菜单现在是按分类分组的，我们需要遍历整个容器来查找所有输入框
             const quantityInputs = currentMenuContainer.querySelectorAll('.quantity-input');
             const orderData = {};
             let total = 0;
@@ -1045,7 +1163,7 @@
             localStorage.setItem(`bbq_order_table_${currentTable}`, JSON.stringify(orderData));
         }
         
-        /** * 动态生成桌号选择下拉菜单的选项 (保持不变) */
+        /** * 动态生成桌号选择下拉菜单的选项 */
         function generateTableSelectors() {
             tableDropdownContent.innerHTML = '';
             for (let i = 1; i <= numTables; i++) {
@@ -1060,7 +1178,43 @@
             }
         }
 
-        // --- 模式切换和数据管理函数 (保持不变) ---
+        // --- 菜单编辑和数据管理函数 ---
+
+        /**
+         * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB。
+         * 图片字段依赖 handleImageUpload 提前更新内存数据。
+         * @param {boolean} silent - 是否静默执行（不显示 alert）。
+         */
+        async function saveCurrentEditsAndPersist(silent = false) {
+            const nameInputs = document.querySelectorAll('.edit-name');
+            const priceInputs = document.querySelectorAll('.edit-price');
+            const categoryInputs = document.querySelectorAll('.edit-category');
+            
+            const dbSavePromises = [];
+
+            for (let i = 0; i < nameInputs.length; i++) {
+                const id = parseInt(nameInputs[i].getAttribute('data-id'));
+                const itemIndex = menuItems.findIndex(item => item.id === id);
+
+                if (itemIndex !== -1) {
+                    // 1. 更新内存中的菜品对象（文本/数字字段）
+                    menuItems[itemIndex].name = nameInputs[i].value.trim();
+                    menuItems[itemIndex].price = parseInt(priceInputs[i].value) || 0;
+                    menuItems[itemIndex].category = categoryInputs[i].value.trim(); 
+                    // 注：menuItems[itemIndex].image 字段已由 handleImageUpload 提前更新
+
+                    // 2. 将更新后的对象保存到数据库
+                    dbSavePromises.push(saveMenuItemToDB(menuItems[itemIndex]));
+                }
+            }
+            
+            // 等待所有数据库保存操作完成
+            await Promise.all(dbSavePromises);
+
+            if (!silent) {
+                 alert('所有菜单项已保存');
+            }
+        }
 
         /**
          * 切换到菜单编辑模式
@@ -1069,7 +1223,7 @@
             if (isSummaryMode) return;
             if (isEditMode) {
                 // 退出编辑模式时保存所有更改
-                await saveAllMenuItems();
+                await saveCurrentEditsAndPersist(false); // 使用非静默保存
                 mainContent.style.display = 'flex';
                 editContent.style.display = 'none';
                 editLink.textContent = '编辑菜单';
@@ -1096,6 +1250,7 @@
                 row.innerHTML = `
                     <td><input type="text" value="${item.name}" data-id="${item.id}" class="edit-name"></td>
                     <td><input type="number" value="${item.price}" data-id="${item.id}" class="edit-price"></td>
+                    <td><input type="text" value="${item.category || ''}" data-id="${item.id}" class="edit-category"></td> 
                     <td>
                         <input type="file" accept="image/*" data-id="${item.id}" class="edit-image">
                         <img src="${item.image || defaultPlaceholder}" style="width:50px;height:50px;" class="preview-img" data-id="${item.id}">
@@ -1114,34 +1269,11 @@
             });
         }
 
+        /**
+         * 保存所有菜单项 (现为对 saveCurrentEditsAndPersist 的封装)
+         */
         async function saveAllMenuItems() {
-            const nameInputs = document.querySelectorAll('.edit-name');
-            const priceInputs = document.querySelectorAll('.edit-price');
-            const imageInputs = document.querySelectorAll('.edit-image');
-
-            for (let i = 0; i < nameInputs.length; i++) {
-                const id = parseInt(nameInputs[i].getAttribute('data-id'));
-                const itemIndex = menuItems.findIndex(item => item.id === id);
-                if (itemIndex !== -1) {
-                    menuItems[itemIndex].name = nameInputs[i].value.trim();
-                    menuItems[itemIndex].price = parseInt(priceInputs[i].value) || 0;
-
-                    if (imageInputs[i].files.length > 0) {
-                        const file = imageInputs[i].files[0];
-                        const reader = new FileReader();
-                        await new Promise((resolve) => {
-                            reader.onload = (e) => {
-                                menuItems[itemIndex].image = e.target.result;
-                                resolve();
-                            };
-                            reader.readAsDataURL(file);
-                        });
-                    }
-
-                    await saveMenuItemToDB(menuItems[itemIndex]);
-                }
-            }
-            alert('所有菜单项已保存');
+            await saveCurrentEditsAndPersist(false);
         }
 
         function handleImageUpload(event) {
@@ -1154,7 +1286,7 @@
                     if (preview) {
                         preview.src = e.target.result;
                     }
-                    // 临时存储到 menuItems
+                    // 临时存储到 menuItems（这是关键步骤，使 saveCurrentEditsAndPersist 能够保存图片）
                     const itemIndex = menuItems.findIndex(item => item.id == id);
                     if (itemIndex !== -1) {
                         menuItems[itemIndex].image = e.target.result;
@@ -1189,18 +1321,23 @@
          * 添加新菜品
          */
         async function addNewItem() {
+            // 1. **新增步骤**: 在添加新项之前，先保存所有当前编辑的内容，防止数据丢失
+            await saveCurrentEditsAndPersist(true); // 使用静默保存
+
             const newItem = {
                 name: "新菜品",
-                price: 1000
+                price: 1000,
+                category: "其他" 
             };
             
-            // 保存到数据库
+            // 2. 保存到数据库
             const id = await saveMenuItemToDB(newItem);
             newItem.id = id;
             
-            // 添加到内存
+            // 3. 添加到内存
             menuItems.push(newItem);
             
+            // 4. 重新渲染编辑器，现在它会包含所有已保存的更改和新项
             await renderMenuEditor();
         }
         
@@ -1298,7 +1435,7 @@
         }
         
         /**
-         * 导出到Excel (增强 iOS 兼容性)
+         * 导出到Excel
          */
         function exportToExcel() {
             const data = [];
@@ -1307,59 +1444,44 @@
             // 获取所有日期键
             const keys = [];
             for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('bbq_orders_by_date_')) {
-                    keys.push(key);
+                    const key = localStorage.key(i);
+                    if (key.startsWith('bbq_orders_by_date_')) {
+                        keys.push(key);
+                    }
                 }
-            }
-            
-            keys.sort().reverse();
-            
-            for (const key of keys) {
-                const date = key.replace('bbq_orders_by_date_', '');
-                const dailyOrders = JSON.parse(localStorage.getItem(key));
                 
-                for (const order of dailyOrders) {
-                    const timestamp = new Date(order.timestamp);
-                    const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
+                keys.sort().reverse();
+                
+                for (const key of keys) {
+                    const date = key.replace('bbq_orders_by_date_', '');
+                    const dailyOrders = JSON.parse(localStorage.getItem(key));
                     
-                    let hasItems = false;
-                    for (const itemName in order.order) {
-                        hasItems = true;
-                        const quantity = order.order[itemName];
-                        const item = menuItems.find(i => i.name === itemName) || { price: 0 };
-                        const subtotal = item.price * quantity;
-                        data.push([date, order.table, timeString, itemName, quantity, item.price, subtotal, '']);
-                    }
-                    if (hasItems) {
-                        data[data.length - 1][7] = order.total;
-                    } else {
-                        data.push([date, order.table, timeString, '', '', '', '', order.total]);
+                    for (const order of dailyOrders) {
+                        const timestamp = new Date(order.timestamp);
+                        const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
+                        
+                        let hasItems = false;
+                        for (const itemName in order.order) {
+                            hasItems = true;
+                            const quantity = order.order[itemName];
+                            const item = menuItems.find(i => i.name === itemName) || { price: 0 };
+                            const subtotal = item.price * quantity;
+                            data.push([date, order.table, timeString, itemName, quantity, item.price, subtotal, '']);
+                        }
+                        if (hasItems) {
+                            data[data.length - 1][7] = order.total; // 在最后一个项添加订单总计
+                        } else {
+                            data.push([date, order.table, timeString, '', '', '', '', order.total]);
+                        }
                     }
                 }
-            }
-            
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "历史账单");
-            
-            // --- 【关键修改】使用 XLSX.write() 和 FileSaver.js 的 saveAs 函数，以提高 iOS 兼容性 ---
-            try {
-                // 生成 ArrayBuffer 格式的 Excel 数据
-                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
                 
-                // 将 ArrayBuffer 转换为 Blob 对象
-                const blob = new Blob([wbout], { type: 'application/octet-stream' });
-
-                // 使用 FileSaver.js 提供的 saveAs 方法进行下载
-                saveAs(blob, '历史账单.xlsx');
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "历史账单");
                 
-            } catch (e) {
-                // 如果 FileSaver.js 失败，退回到标准的 writeFile
-                console.error("使用 Blob 导出失败，尝试使用原生 writeFile:", e);
                 XLSX.writeFile(wb, '历史账单.xlsx');
             }
-        }
             
             /**
              * 清空所有历史账单
@@ -1393,6 +1515,9 @@
 
             /** * 应用程序初始化函数 */
             async function initializeUI() {
+                // 确保 AudioContext 在 DOM 加载后被创建，但可能仍处于 'suspended' 状态
+                initAudioContext(); 
+                
                 await openDB();
                 await loadMenuItems();
                 generateTableSelectors();
@@ -1401,6 +1526,14 @@
                 
                 settleButton.textContent = `结算并清空${currentTable}号桌`;
             }
+            
+            // 绑定 AudioContext 恢复逻辑到用户首次点击
+            document.addEventListener('click', () => {
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume().catch(e => console.error("AudioContext 恢复失败:", e));
+                }
+            }, { once: true });
+
 
             // 绑定 DOMContentLoaded 事件
             document.addEventListener('DOMContentLoaded', () => {
