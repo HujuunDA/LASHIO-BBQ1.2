@@ -652,7 +652,7 @@
 
         const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iOCIgZmlsbD0iI0ZGM0E1MCIvPgo8cGF0aCBkPSJNMzUgMzVMMzUgMjVNMzUgNDVNNDUgMzVMMjUgMzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=";
 
-        // --- 音频上下文全局管理 (修复关键点 1) ---
+        // --- 音频上下文全局管理 ---
         let audioContext;
 
         /** * 确保 AudioContext 在用户交互后处于活动状态 */
@@ -776,39 +776,35 @@
         // --- 辅助工具函数 ---
 
         /**
-         * 播放音效（用于点单反馈） (修复关键点 2 & 3)
+         * 播放音效（用于点单反馈）
          */
         function playSound() {
             if (!audioContext || audioContext.state === 'suspended') {
-                initAudioContext(); // 尝试初始化或恢复上下文
+                initAudioContext(); 
                 if (audioContext && audioContext.state === 'suspended') {
                     audioContext.resume().catch(e => console.error("AudioContext 恢复失败:", e));
                 }
             }
 
             if (!audioContext || audioContext.state !== 'running') {
-                console.log("AudioContext 无法运行，跳过播放音效。");
                 return;
             }
 
             try {
-                // 确保每次都使用当前的 audioContext
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
                 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 
-                oscillator.type = 'sine'; // 使用正弦波
-                oscillator.frequency.value = 800; // 频率 800 Hz
+                oscillator.type = 'sine'; 
+                oscillator.frequency.value = 800; 
                 gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
                 
-                // 播放 0.05 秒，然后渐出
                 oscillator.start();
                 gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
                 oscillator.stop(audioContext.currentTime + 0.05);
 
-                // 移除引用，允许垃圾回收
                 oscillator.onended = () => {
                     oscillator.disconnect();
                     gainNode.disconnect();
@@ -960,11 +956,20 @@
                 printArea.style.opacity = '0';
                 printArea.innerHTML = ''; 
 
-                // 5. 尝试打开自定义应用程序 (如果需要，请替换 URL Scheme)
-                const customAppScheme = 'myposapp://receipt_complete'; 
-                setTimeout(() => {
-                    window.location.href = customAppScheme;
-                }, 100); 
+                // ----------------------------------------------------------------------
+                // 【针对 iOS/Safari 的修复：删除异步的 URL Scheme 跳转】
+                // 导致 iOS 报错的原因是：在异步的 html2canvas.then() 内部尝试执行 
+                // window.location.href = 'custom-scheme://...' 会被浏览器阻止。
+                // 移除这部分代码以确保结算流程的稳定性。
+                // ----------------------------------------------------------------------
+                
+                // const customAppScheme = 'myposapp://receipt_complete'; 
+                // setTimeout(() => {
+                //     window.location.href = customAppScheme;
+                // }, 100); 
+
+                // 如果将来确实需要自定义应用跳转，应让用户点击一个按钮来触发，
+                // 或者在没有下载操作的情况下立即执行。
 
             }).catch(error => {
                 console.error("图片生成失败:", error);
@@ -1080,7 +1085,13 @@
                             </div>
                             <div class="item-controls" onclick="event.stopPropagation();">
                                 <button onclick="changeQuantity('${item.name}', 1, ${i})">+</button>
-                                <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${i}" value="${quantity}" oninput="updateBill()">
+                                <input type="number" 
+                                       class="quantity-input" 
+                                       data-item-name="${item.name}" 
+                                       data-table-number="${i}" 
+                                       value="${quantity}" 
+                                       oninput="updateBill()"
+                                       onchange="playSound(); vibrateDevice();">
                                 <button onclick="changeQuantity('${item.name}', -1, ${i})">-</button>
                             </div>
                         `;
@@ -1130,7 +1141,8 @@
             // 遍历当前桌子所有菜品，计算总价并构建订单数据
             quantityInputs.forEach(input => {
                 const itemName = input.getAttribute('data-item-name');
-                const quantity = parseInt(input.value) || 0;
+                // 确保值是有效的数字，如果手动输入非数字，则默认为 0
+                const quantity = parseInt(input.value) || 0; 
                 
                 if (quantity > 0) {
                     orderData[itemName] = quantity;
