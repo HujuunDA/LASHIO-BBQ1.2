@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.13.17.06</title>
+    <title>烧烤账单计算器10.13.17.24</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -420,18 +420,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             backdrop-filter: blur(10px);
         }
-        /* New: Scale down Menu Editor on small screens (max-width: 767px) */
-        @media (max-width: 767px) {
-            #edit-content {
-                /* Scale to 80% */
-                transform: scale(0.8);
-                /* Scale from the top center */
-                transform-origin: top center;
-                /* Compensate for scaling to roughly center it and prevent unnecessary horizontal scrollbar on some devices */
-                width: 125%; 
-                margin-left: -12.5%; 
-            }
-        }
         
         .menu-editor-container table {
             width: 100%;
@@ -565,12 +553,8 @@
 <body>
 
     <div class="top-bar">
-        <div class="dropdown table-selector-dropdown">
-            <button id="table-selector-dropbtn" class="dropbtn table-selector-dropbtn">桌号</button>
-            <div id="table-dropdown-content" class="dropdown-content">
-                </div>
-        </div>
-
+        <span id="current-table-display" style="font-size: 1.5em; font-weight: bold; color: #f39c12; margin-right: auto; padding: 10px 0;">1号桌</span>
+        
         <div class="dropdown">
             <button id="settings-dropbtn" class="dropbtn">&#9881;</button>
             <div id="action-dropdown" class="dropdown-content">
@@ -656,11 +640,14 @@
         const billDetails = document.getElementById('bill-details');
         const totalPriceSpan = document.getElementById('total-price');
         const settleButton = document.getElementById('settle-button');
-        const tableSelectorDropbtn = document.getElementById('table-selector-dropbtn');
-        const tableDropdownContent = document.getElementById('table-dropdown-content');
+        // const tableSelectorDropbtn = document.getElementById('table-selector-dropbtn'); // 已移除
+        // const tableDropdownContent = document.getElementById('table-dropdown-content'); // 已移除
         const editLink = document.getElementById('edit-link');
         const summaryLink = document.getElementById('summary-link');
         const printArea = document.getElementById('print-area'); 
+        
+        // 新增：引用新的桌号显示元素
+        const currentTableDisplay = document.getElementById('current-table-display'); 
 
         const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iOCIgZmlsbD0iI0ZGM0E1MCIvPgo8cGF0aCBkPSJNMzUgMzVMMzUgMjVNMzUgNDVNNDUgMzVMMjUgMzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=";
 
@@ -888,10 +875,10 @@
             }
 
             currentTable = tableNumber;
-            // ADDED: 保存当前桌号到 LocalStorage
-            localStorage.setItem('bbq_last_table', currentTable);
-
-            tableSelectorDropbtn.textContent = `${currentTable}号桌`;
+            // 修改点：更新新的静态显示元素
+            if (currentTableDisplay) {
+                currentTableDisplay.textContent = `${currentTable}号桌`;
+            }
             settleButton.textContent = `结算并清空${tableNumber}号桌`;
 
             setTimeout(() => {
@@ -1178,20 +1165,10 @@
             localStorage.setItem(`bbq_order_table_${currentTable}`, JSON.stringify(orderData));
         }
         
-        /** * 动态生成桌号选择下拉菜单的选项 */
-        function generateTableSelectors() {
-            tableDropdownContent.innerHTML = '';
-            for (let i = 1; i <= numTables; i++) {
-                const link = document.createElement('a');
-                link.href = '#';
-                link.textContent = `${i}号桌`;
-                link.onclick = (e) => {
-                    e.preventDefault();
-                    switchTable(i);
-                };
-                tableDropdownContent.appendChild(link);
-            }
-        }
+        /**
+         * 动态生成桌号选择下拉菜单的选项
+         * **此函数已被删除，功能已由静态元素取代。**
+         */
 
         // --- 菜单编辑和数据管理函数 ---
 
@@ -1535,19 +1512,15 @@
                 
                 await openDB();
                 await loadMenuItems();
-                generateTableSelectors();
-                
-                // ADDED: 加载上次保存的桌号，如果不存在则默认为 1
-                const lastTable = localStorage.getItem('bbq_last_table');
-                if (lastTable && !isNaN(parseInt(lastTable))) {
-                    currentTable = parseInt(lastTable);
-                } else {
-                    currentTable = 1; // Default to 1 if not found or invalid
-                }
-                
+                // 移除了 generateTableSelectors(); 
                 await renderAllMenus();
                 updateBill();
                 
+                // 确保新的显示元素被设置
+                if (currentTableDisplay) {
+                    currentTableDisplay.textContent = `${currentTable}号桌`;
+                }
+
                 settleButton.textContent = `结算并清空${currentTable}号桌`;
             }
             
