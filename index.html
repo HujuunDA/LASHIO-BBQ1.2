@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.13.20.36</title>
+    <title>烧烤账单计算器10.13.20.39</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -461,7 +461,8 @@
         }
 
         /* ----------------------- 账单明细样式 ----------------------- */
-        #bill-details div {
+        /* 账单明细中的行样式 (性能优化：将item-row用于JS查找) */
+        #bill-details .item-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 10px;
@@ -767,7 +768,7 @@
 
         const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iOCIgZmlsbD0iI0ZGM0E1MCIvPgo8cGF0aCBkPSJNMzUgMzVMMzUgMjVNMzUgNDVNNDUgMzVMMjUgMzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=";
 
-        // --- 音频上下文全局管理 (修复关键点 1) ---
+        // --- 音频上下文全局管理 ---
         let audioContext;
 
         /** * 确保 AudioContext 在用户交互后处于活动状态 */
@@ -863,6 +864,7 @@
             const store = transaction.objectStore(menuStoreName);
             
             for (const item of defaultMenu) {
+                // 仅添加没有 ID 的新项目
                 if (!item.id) {
                     store.add(item);
                 } else {
@@ -891,47 +893,46 @@
         // --- 辅助工具函数 ---
 
         /**
-         * 播放音效（用于点单反馈） (修复关键点 2 & 3)
+         * 播放音效（用于点单反馈） 
          */
         function playSound() {
-            if (!audioContext || audioContext.state === 'suspended') {
-                initAudioContext(); // 尝试初始化或恢复上下文
-                if (audioContext && audioContext.state === 'suspended') {
-                    audioContext.resume().catch(e => console.error("AudioContext 恢复失败:", e));
+            // 异步执行，不阻塞主线程
+            requestAnimationFrame(() => {
+                if (!audioContext || audioContext.state === 'suspended') {
+                    initAudioContext(); 
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume().catch(e => console.error("AudioContext 恢复失败:", e));
+                    }
                 }
-            }
 
-            if (!audioContext || audioContext.state !== 'running') {
-                console.log("AudioContext 无法运行，跳过播放音效。");
-                return;
-            }
+                if (!audioContext || audioContext.state !== 'running') {
+                    return;
+                }
 
-            try {
-                // 确保每次都使用当前的 audioContext
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.type = 'sine'; // 使用正弦波
-                oscillator.frequency.value = 800; // 频率 800 Hz
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                
-                // 播放 0.05 秒，然后渐出
-                oscillator.start();
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
-                oscillator.stop(audioContext.currentTime + 0.05);
+                try {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'sine'; 
+                    oscillator.frequency.value = 800; 
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    
+                    oscillator.start();
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+                    oscillator.stop(audioContext.currentTime + 0.05);
 
-                // 移除引用，允许垃圾回收
-                oscillator.onended = () => {
-                    oscillator.disconnect();
-                    gainNode.disconnect();
-                };
+                    oscillator.onended = () => {
+                        oscillator.disconnect();
+                        gainNode.disconnect();
+                    };
 
-            } catch (e) {
-                console.error("音频播放失败:", e);
-            }
+                } catch (e) {
+                    console.error("音频播放失败:", e);
+                }
+            });
         }
 
         /**
@@ -978,7 +979,7 @@
         }
 
         /**
-         * 从 LocalStorage 加载指定桌子的备注 (新增)
+         * 从 LocalStorage 加载指定桌子的备注
          */
         function loadTableNote(tableNumber) {
             return localStorage.getItem(`bbq_note_table_${tableNumber}`) || '';
@@ -990,7 +991,7 @@
         async function switchTable(tableNumber) {
             if (isEditMode || isSummaryMode) return;
             
-            // 切换菜单容器的显示状态
+            // 切换菜单容器的显示状态 (使用 setTimeout 确保平滑切换)
             const currentMenuContainer = document.querySelector(`.table-menu-container.active`);
             const nextMenuContainer = document.getElementById(`table-${tableNumber}-menu`);
             if (currentMenuContainer) {
@@ -998,7 +999,6 @@
             }
 
             currentTable = tableNumber;
-            // ADDED: 保存当前桌号到 LocalStorage
             localStorage.setItem('bbq_last_table', currentTable);
 
             tableSelectorDropbtn.textContent = `${currentTable}号桌`;
@@ -1007,6 +1007,7 @@
             // 加载备注信息到输入框
             orderNoteInput.value = loadTableNote(currentTable); 
 
+            // **性能优化点**: 延迟更新账单，让菜单切换动画优先完成
             setTimeout(() => {
                 if (nextMenuContainer) {
                     nextMenuContainer.classList.add('active');
@@ -1016,13 +1017,13 @@
         }
 
         /**
-         * 将账单内容转换为图片并下载
+         * 将账单内容转换为图片并下载 (此功能本身性能开销大，但在结算时只发生一次)
          */
         function printBillToImage() {
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
             const todayDate = getTodayDateString();
-            const currentNote = loadTableNote(currentTable); // 获取备注信息
+            const currentNote = loadTableNote(currentTable); 
             
             const now = new Date();
             const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -1034,7 +1035,8 @@
                     <p>日期: ${todayDate}</p>
                     <p>时间: ${timeString}</p>
                     <p>桌号: ${currentTable}号桌</p>
-                    ${currentNote ? `<p>备注: ${currentNote}</p>` : ''} </div>
+                    ${currentNote ? `<p>备注: ${currentNote}</p>` : ''} 
+                </div>
                 <hr>
             `;
             
@@ -1070,6 +1072,7 @@
             void printArea.offsetWidth; 
 
             // 3. 使用 html2canvas 将 DOM 元素转为 Canvas
+            // **性能提示**: html2canvas 是性能瓶颈，建议告知用户生成图片需要几秒时间
             html2canvas(printArea, { 
                 scale: 2, 
                 useCORS: true, 
@@ -1089,7 +1092,6 @@
                 printArea.style.opacity = '0';
                 printArea.innerHTML = ''; 
 
-                // 5. 尝试打开自定义应用程序 (如果需要，请替换 URL Scheme)
                 const customAppScheme = 'myposapp://receipt_complete'; 
                 setTimeout(() => {
                     window.location.href = customAppScheme;
@@ -1110,11 +1112,11 @@
         function settleAndClear() {
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
-            const currentNote = loadTableNote(currentTable); // 获取备注
+            const currentNote = loadTableNote(currentTable); 
 
             if (total > 0) {
                 if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
-                    // 1. 下载账单图片
+                    // 1. 下载账单图片 (同步调用，等待图片生成)
                     printBillToImage();
 
                     // 2. 记录历史订单到 LocalStorage
@@ -1127,7 +1129,7 @@
                         timestamp: new Date().toISOString(),
                         order: currentOrder,
                         total: total,
-                        note: currentNote // 记录备注
+                        note: currentNote 
                     });
                     
                     localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
@@ -1139,12 +1141,18 @@
                     // 4. 清空界面上的数量和账单显示
                     const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
                     if (currentMenuContainer) {
-                        currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
-                            input.value = 0;
+                        // **性能优化点**: 使用 requestAnimationFrame 批量更新输入框
+                        requestAnimationFrame(() => {
+                            currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
+                                input.value = 0;
+                            });
+                            orderNoteInput.value = ''; 
+                            updateBill();
                         });
+                    } else {
+                        orderNoteInput.value = ''; 
+                        updateBill();
                     }
-                    orderNoteInput.value = ''; // 清空备注输入框
-                    updateBill();
                     
                     alert(`${currentTable}号桌结算成功！`);
                 }
@@ -1162,7 +1170,6 @@
 
             // 1. Group items by category
             const categorizedItems = menuItems.reduce((acc, item) => {
-                // 使用 category 字段进行分组，如果没有则默认为 "其他"
                 const category = item.category && item.category.trim() !== '' ? item.category.trim() : "其他"; 
                 if (!acc[category]) {
                     acc[category] = [];
@@ -1186,24 +1193,24 @@
                     const categorySection = document.createElement('div');
                     categorySection.className = 'category-section';
 
-                    // 分类标题
                     const header = document.createElement('div');
                     header.className = 'category-header';
                     header.innerHTML = `<span>${category} (${categorizedItems[category].length} 项)</span>`; 
                     categorySection.appendChild(header);
 
-                    // 分类下的菜品内容 (使用 category-content 容器启用 Flexbox)
                     const content = document.createElement('div');
                     content.className = 'category-content';
 
                     for (const item of categorizedItems[category]) {
                         const quantity = order[item.name] || 0;
                         
-                        // 菜品项的 HTML 结构 (使用正方形卡片样式)
+                        // 菜品项的 HTML 结构
                         const itemDiv = document.createElement('div');
                         itemDiv.classList.add('item');
-                        // 点击菜品项任意非控制区域，数量 +1
-                        itemDiv.setAttribute('onclick', `changeQuantity('${item.name}', 1, ${i})`); 
+                        // 优化: 将 data-item-name 属性直接放在 itemDiv 上，方便点击时识别
+                        itemDiv.setAttribute('data-item-name', item.name);
+                        itemDiv.setAttribute('data-table-number', i);
+                        itemDiv.setAttribute('onclick', `changeQuantityFromCard(event, '${item.name}', 1, ${i})`); 
 
                         itemDiv.innerHTML = `
                             <img src="${item.image || defaultPlaceholder}" alt="${item.name}" class="item-image">
@@ -1232,12 +1239,24 @@
                 currentMenu.classList.add('active');
             }
         }
+        
+        /**
+         * 针对卡片点击的辅助函数，确保点击按钮区域不会重复触发
+         */
+        function changeQuantityFromCard(event, itemName, change, tableNumber) {
+            // 确保点击的不是控件区域 (item-controls)
+            const isControl = event.target.closest('.item-controls');
+            if (isControl) return; 
+            changeQuantity(itemName, change, tableNumber);
+        }
+
 
         /** * 更改指定菜品在指定桌子的数量 */
         function changeQuantity(itemName, change, tableNumber) {
             playSound();
             vibrateDevice();
 
+            // **性能优化点**: 仅查找和更新当前的输入框值，而不是遍历整个 DOM
             const input = document.querySelector(`.quantity-input[data-item-name='${itemName}'][data-table-number='${tableNumber}']`);
             if (!input) return;
             
@@ -1245,13 +1264,19 @@
             
             if (quantity + change >= 0) {
                 quantity += change;
-                input.value = quantity;
-                updateBill();
+                
+                // **性能优化点**: 使用 requestAnimationFrame 确保在下次浏览器重绘前进行 DOM 更新
+                requestAnimationFrame(() => {
+                    input.value = quantity;
+                    updateBill();
+                });
             }
         }
 
         /** * 更新账单显示和总价，并保存当前桌子的订单到 LocalStorage */
         function updateBill() {
+            // **性能优化核心**: 减少 DOM 操作，只更新/增删必要的元素
+            
             const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
             if (!currentMenuContainer) return;
 
@@ -1260,18 +1285,19 @@
             localStorage.setItem(`bbq_note_table_${currentTable}`, currentNote);
             currentNoteDisplay.textContent = currentNote ? `备注: ${currentNote}` : '';
 
-            // 2. 处理订单
+            // 2. 收集订单数据 (从当前显示页面的 input 中获取)
             const quantityInputs = currentMenuContainer.querySelectorAll('.quantity-input');
             const orderData = {};
             let total = 0;
+            let currentOrderNames = new Set(); // 用于追踪当前订单中的菜品名称
 
-            // 遍历当前桌子所有菜品，计算总价并构建订单数据
             quantityInputs.forEach(input => {
                 const itemName = input.getAttribute('data-item-name');
                 const quantity = parseInt(input.value) || 0;
                 
                 if (quantity > 0) {
                     orderData[itemName] = quantity;
+                    currentOrderNames.add(itemName);
                     const item = menuItems.find(i => i.name === itemName);
                     if (item) {
                         total += item.price * quantity;
@@ -1279,25 +1305,49 @@
                 }
             });
             
-            // 更新账单明细显示
-            billDetails.innerHTML = '';
-            for (const itemName in orderData) {
+            // 3. **性能优化**: 差异化更新账单明细 DOM
+            const existingRows = billDetails.querySelectorAll('.item-row');
+            const itemRowsMap = new Map();
+            existingRows.forEach(row => {
+                const name = row.getAttribute('data-item-name');
+                itemRowsMap.set(name, row);
+            });
+            
+            // 遍历新订单数据进行更新或添加
+            for (const itemName of currentOrderNames) {
                 const quantity = orderData[itemName];
                 const item = menuItems.find(i => i.name === itemName);
                 const subtotal = item.price * quantity;
                 
-                const billItemDiv = document.createElement('div');
-                billItemDiv.innerHTML = `
-                    <span>${itemName} (${item.price.toFixed(0)} Ks/份) x ${quantity}</span>
-                    <span class="item-total">${subtotal.toFixed(0)} Ks</span>
-                `;
-                billDetails.appendChild(billItemDiv);
+                if (itemRowsMap.has(itemName)) {
+                    // **更新**: 如果元素已存在，则只更新其文本内容
+                    const row = itemRowsMap.get(itemName);
+                    row.querySelector('.item-name-qty').textContent = `${itemName} (${item.price.toFixed(0)} Ks/份) x ${quantity}`;
+                    row.querySelector('.item-total').textContent = `${subtotal.toFixed(0)} Ks`;
+                    itemRowsMap.delete(itemName); // 从 Map 中移除，剩余的需要被删除
+                } else {
+                    // **新增**: 创建新的 DOM 元素
+                    const billItemDiv = document.createElement('div');
+                    billItemDiv.classList.add('item-row');
+                    billItemDiv.setAttribute('data-item-name', itemName); // 标记以便下次更新
+                    
+                    billItemDiv.innerHTML = `
+                        <span class="item-name-qty">${itemName} (${item.price.toFixed(0)} Ks/份) x ${quantity}</span>
+                        <span class="item-total">${subtotal.toFixed(0)} Ks</span>
+                    `;
+                    billDetails.appendChild(billItemDiv);
+                }
             }
             
-            // 更新总价
+            // 4. **删除**: 遍历 Map 中剩余的元素 (数量已变为 0 或不存在于新订单中)
+            itemRowsMap.forEach(row => {
+                row.remove();
+            });
+
+            // 5. 更新总价
             totalPriceSpan.textContent = total.toFixed(0);
             
-            // 保存订单数据到 LocalStorage
+            // 6. 保存订单数据到 LocalStorage
             localStorage.setItem(`bbq_order_table_${currentTable}`, JSON.stringify(orderData));
         }
         
@@ -1316,12 +1366,10 @@
             }
         }
 
-        // --- 菜单编辑和数据管理函数 ---
+        // --- 菜单编辑和数据管理函数 (未更改) ---
 
         /**
          * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB。
-         * 图片字段依赖 handleImageUpload 提前更新内存数据。
-         * @param {boolean} silent - 是否静默执行（不显示 alert）。
          */
         async function saveCurrentEditsAndPersist(silent = false) {
             const nameInputs = document.querySelectorAll('.edit-name');
@@ -1335,18 +1383,14 @@
                 const itemIndex = menuItems.findIndex(item => item.id === id);
 
                 if (itemIndex !== -1) {
-                    // 1. 更新内存中的菜品对象（文本/数字字段）
                     menuItems[itemIndex].name = nameInputs[i].value.trim();
                     menuItems[itemIndex].price = parseInt(priceInputs[i].value) || 0;
                     menuItems[itemIndex].category = categoryInputs[i].value.trim(); 
-                    // 注：menuItems[itemIndex].image 字段已由 handleImageUpload 提前更新
 
-                    // 2. 将更新后的对象保存到数据库
                     dbSavePromises.push(saveMenuItemToDB(menuItems[itemIndex]));
                 }
             }
             
-            // 等待所有数据库保存操作完成
             await Promise.all(dbSavePromises);
 
             if (!silent) {
@@ -1360,8 +1404,7 @@
         async function toggleEditMode() {
             if (isSummaryMode) return;
             if (isEditMode) {
-                // 退出编辑模式时保存所有更改
-                await saveCurrentEditsAndPersist(false); // 使用非静默保存
+                await saveCurrentEditsAndPersist(false); 
                 mainContent.style.display = 'flex';
                 editContent.style.display = 'none';
                 editLink.textContent = '编辑菜单';
@@ -1408,7 +1451,7 @@
         }
 
         /**
-         * 保存所有菜单项 (现为对 saveCurrentEditsAndPersist 的封装)
+         * 保存所有菜单项
          */
         async function saveAllMenuItems() {
             await saveCurrentEditsAndPersist(false);
@@ -1424,7 +1467,6 @@
                     if (preview) {
                         preview.src = e.target.result;
                     }
-                    // 临时存储到 menuItems（这是关键步骤，使 saveCurrentEditsAndPersist 能够保存图片）
                     const itemIndex = menuItems.findIndex(item => item.id == id);
                     if (itemIndex !== -1) {
                         menuItems[itemIndex].image = e.target.result;
@@ -1459,8 +1501,7 @@
          * 添加新菜品
          */
         async function addNewItem() {
-            // 1. **新增步骤**: 在添加新项之前，先保存所有当前编辑的内容，防止数据丢失
-            await saveCurrentEditsAndPersist(true); // 使用静默保存
+            await saveCurrentEditsAndPersist(true); // 静默保存所有已编辑内容
 
             const newItem = {
                 name: "新菜品",
@@ -1468,17 +1509,19 @@
                 category: "其他" 
             };
             
-            // 2. 保存到数据库
+            // 保存到数据库
             const id = await saveMenuItemToDB(newItem);
             newItem.id = id;
             
-            // 3. 添加到内存
+            // 添加到内存
             menuItems.push(newItem);
             
-            // 4. 重新渲染编辑器，现在它会包含所有已保存的更改和新项
+            // 重新渲染编辑器
             await renderMenuEditor();
         }
         
+        // --- 汇总模式函数 (未更改) ---
+
         /**
          * 切换到历史汇总模式
          */
@@ -1507,7 +1550,6 @@
             
             let grandTotal = 0;
             
-            // 获取所有日期键
             const keys = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
@@ -1516,7 +1558,6 @@
                 }
             }
             
-            // 按日期排序（最新的在前）
             keys.sort().reverse();
             
             if (keys.length === 0) {
@@ -1545,14 +1586,14 @@
                         itemsHTML += `<li>${itemName} x ${quantity} = ${subtotal.toFixed(0)} Ks</li>`;
                     }
                     
-                    // 获取备注信息
                     const noteDisplay = order.note ? `<p>备注: ${order.note}</p>` : '';
 
                     ordersHTML += `
                         <div class="order-details">
                             <p>桌号: ${order.table}号桌</p>
                             <p>时间: ${timeString}</p>
-                            ${noteDisplay} <ul class="order-items">${itemsHTML}</ul>
+                            ${noteDisplay} 
+                            <ul class="order-items">${itemsHTML}</ul>
                             <p>小计: ${order.total.toFixed(0)} Ks</p>
                         </div>
                     `;
@@ -1582,7 +1623,6 @@
             const data = [];
             data.push(['日期', '桌号', '时间', '备注', '菜品', '数量', '单价', '小计', '订单总计']);
             
-            // 获取所有日期键
             const keys = [];
             for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
@@ -1610,7 +1650,7 @@
                             data.push([date, order.table, timeString, order.note || '', itemName, quantity, item.price, subtotal, '']);
                         }
                         if (hasItems) {
-                            data[data.length - 1][8] = order.total; // 在最后一个项添加订单总计
+                            data[data.length - 1][8] = order.total; 
                         } else {
                             data.push([date, order.table, timeString, order.note || '', '', '', '', '', order.total]);
                         }
@@ -1663,12 +1703,11 @@
                 await loadMenuItems();
                 generateTableSelectors();
                 
-                // ADDED: 加载上次保存的桌号，如果不存在则默认为 1
                 const lastTable = localStorage.getItem('bbq_last_table');
                 if (lastTable && !isNaN(parseInt(lastTable))) {
                     currentTable = parseInt(lastTable);
                 } else {
-                    currentTable = 1; // Default to 1 if not found or invalid
+                    currentTable = 1; 
                 }
                 
                 orderNoteInput.addEventListener('input', updateBill); // 监听备注输入框变化
