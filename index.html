@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.13.16.39</title>
+    <title>烧烤账单计算器10.13.16.52</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -620,25 +620,6 @@
     </div>
 
     <div id="print-area"></div>
-    
-    <div id="receipt-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 200; backdrop-filter: blur(5px); overflow-y: auto;">
-        <div style="background: white; margin: 5% auto; padding: 20px; border-radius: 10px; max-width: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative;">
-            <h2 id="modal-title" style="text-align: center; color: #f39c12; margin-top: 0;">结算账单</h2>
-            
-            <div id="modal-receipt-content" style="text-align: center;">
-                <img id="modal-receipt-image" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px;">
-                <p id="modal-tip" style="font-size: 0.9em; color: #555;"></p>
-            </div>
-            
-            <div style="display: flex; justify-content: space-around; margin-top: 20px;">
-                <button id="share-print-button" onclick="handleSharePrint()" style="flex: 1; padding: 10px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">分享 / 打印</button>
-                <button onclick="closeModal()" style="flex: 1; padding: 10px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">关闭</button>
-            </div>
-    
-            <a id="temp-download-link" style="display: none;"></a>
-        </div>
-    </div>
-
 
     <script>
         // --- IndexedDB 数据存储配置 ---
@@ -669,11 +650,10 @@
         const summaryLink = document.getElementById('summary-link');
         const printArea = document.getElementById('print-area'); 
 
-        const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAv... (truncated for brevity) ...Lw4vPjwhLS0gPHJlY3QgeD0iMjUiIHk9IjI1IiB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIGZpbGw9IndoaXRlIiByeD0iNSIvPiAtLT4KPC9zdmc+Cg==";
+        const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iOCIgZmlsbD0iI0ZGM0E1MCIvPgo8cGF0aCBkPSJNMzUgMzVMMzUgMjVNMzUgNDVNNDUgMzVMMjUgMzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=";
 
-        // --- 音频上下文全局管理 ---
+        // --- 音频上下文全局管理 (修复关键点 1) ---
         let audioContext;
-        let lastGeneratedImageUrl = ''; // 用于存储最后一次生成的图片 URL
 
         /** * 确保 AudioContext 在用户交互后处于活动状态 */
         function initAudioContext() {
@@ -796,35 +776,39 @@
         // --- 辅助工具函数 ---
 
         /**
-         * 播放音效（用于点单反馈）
+         * 播放音效（用于点单反馈） (修复关键点 2 & 3)
          */
         function playSound() {
             if (!audioContext || audioContext.state === 'suspended') {
-                initAudioContext(); 
+                initAudioContext(); // 尝试初始化或恢复上下文
                 if (audioContext && audioContext.state === 'suspended') {
                     audioContext.resume().catch(e => console.error("AudioContext 恢复失败:", e));
                 }
             }
 
             if (!audioContext || audioContext.state !== 'running') {
+                console.log("AudioContext 无法运行，跳过播放音效。");
                 return;
             }
 
             try {
+                // 确保每次都使用当前的 audioContext
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
                 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 
-                oscillator.type = 'sine'; 
-                oscillator.frequency.value = 800; 
+                oscillator.type = 'sine'; // 使用正弦波
+                oscillator.frequency.value = 800; // 频率 800 Hz
                 gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
                 
+                // 播放 0.05 秒，然后渐出
                 oscillator.start();
                 gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
                 oscillator.stop(audioContext.currentTime + 0.05);
 
+                // 移除引用，允许垃圾回收
                 oscillator.onended = () => {
                     oscillator.disconnect();
                     gainNode.disconnect();
@@ -904,8 +888,7 @@
         }
 
         /**
-         * 将账单内容转换为 Base64 图片 URL
-         * @returns {Promise<string>} Base64 Data URL of the generated receipt image.
+         * 将账单内容转换为图片并下载
          */
         function printBillToImage() {
             const currentOrder = loadCurrentOrder(currentTable);
@@ -957,21 +940,33 @@
             
             void printArea.offsetWidth; 
 
-            // 2. 使用 html2canvas 将 DOM 元素转为 Canvas
-            return html2canvas(printArea, { 
+            // 3. 使用 html2canvas 将 DOM 元素转为 Canvas
+            html2canvas(printArea, { 
                 scale: 2, 
                 useCORS: true, 
                 backgroundColor: '#ffffff', 
             }).then(canvas => {
                 const imgUrl = canvas.toDataURL('image/png');
                 
-                // 3. 恢复 print-area 的原始状态
+                const a = document.createElement('a');
+                a.href = imgUrl;
+                a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
+                document.body.appendChild(a);
+                a.click(); // 触发下载
+                document.body.removeChild(a);
+                
+                // 4. 恢复 print-area 的原始状态
                 printArea.style.display = originalDisplay; 
                 printArea.style.opacity = '0';
                 printArea.innerHTML = ''; 
-                
-                // 4. 返回图片 URL
-                return imgUrl;
+
+                // 5. 移除尝试打开自定义应用程序的逻辑，满足用户“其他显示什么就不需要了”的要求
+                /*
+                const customAppScheme = 'myposapp://receipt_complete'; 
+                setTimeout(() => {
+                    window.location.href = customAppScheme;
+                }, 100); 
+                */
 
             }).catch(error => {
                 console.error("图片生成失败:", error);
@@ -979,159 +974,48 @@
                 
                 printArea.style.display = originalDisplay;
                 printArea.style.opacity = '0';
-                throw error; // 抛出错误以供调用者处理
             });
         }
 
         /**
-         * 显示结算账单模态框
-         * @param {string} imageUrl - Base64 图片 URL。
+         * 结算并清空当前桌子的订单 (已移除确认弹窗和结算成功提示)
          */
-        function showModal(imageUrl) {
-            const modal = document.getElementById('receipt-modal');
-            const imgElement = document.getElementById('modal-receipt-image');
-            const tipElement = document.getElementById('modal-tip');
-            const shareButton = document.getElementById('share-print-button');
-            const modalTitle = document.getElementById('modal-title');
-            
-            lastGeneratedImageUrl = imageUrl; 
-            modalTitle.textContent = `${currentTable}号桌 结算账单`;
-
-            imgElement.src = imageUrl;
-
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const supportsShare = !!navigator.share;
-            
-            // ** 1. 统一按钮文本 **
-            shareButton.textContent = '分享 / 打印'; 
-            
-            if (supportsShare) {
-                // 2. Web Share API 可用 (最佳情况：可能是 Android 或 iOS 的 HTTPS 链接)
-                shareButton.setAttribute('onclick', 'handleSharePrint()'); // 尝试 Web Share
-                tipElement.innerHTML = `<span style="color:#27ae60; font-weight: bold;">点击按钮，直接调用系统分享菜单。</span>`;
-
-            } else if (isIOS) {
-                // 3. iOS HTTP/Safari 限制：Web Share 失败，强制走打印流程，引导用户在打印界面内分享。
-                shareButton.setAttribute('onclick', 'window.print()'); 
-                tipElement.innerHTML = `<span style="color:#e74c3c; font-weight: bold;">**针对 iOS (HTTP)：** 点击按钮将打开浏览器打印界面。**请在打印预览界面，点击右上角分享按钮**，即可发送给打印App。</span>`;
-                
-            } else {
-                // 4. Android / PC (Web Share 不可用)
-                // Fallback to print, which often meets the user's need on Android.
-                shareButton.setAttribute('onclick', 'window.print()');
-                tipElement.innerHTML = `Android/PC：点击按钮调用浏览器打印。若需保存，请长按或右键图片。`;
-            }
-
-            modal.style.display = 'flex'; // 使用 flex 使模态框居中
-            modal.style.alignItems = 'center';
-            modal.style.justifyContent = 'center';
-        }
-
-        
-        /**
-         * 关闭模态框
-         */
-        function closeModal() {
-            document.getElementById('receipt-modal').style.display = 'none';
-            lastGeneratedImageUrl = '';
-        }
-
-        /**
-         * 处理分享/打印按钮的点击事件 (使用 Web Share API)
-         */
-        async function handleSharePrint() {
-            if (!lastGeneratedImageUrl) {
-                alert("图片数据丢失，请重新结算。");
-                return;
-            }
-            
-            // 检查是否支持 Web Share API
-            if (navigator.share) {
-                // ** Web Share API 无法直接分享 Base64 数据 URL，必须转为 Blob/File。**
-                
-                try {
-                    // 1. 将 Base64 转换为 Blob
-                    const response = await fetch(lastGeneratedImageUrl);
-                    const blob = await response.blob();
-                    
-                    // 2. 将 Blob 包装成 File 对象
-                    const file = new File([blob], `账单-${currentTable}-${new Date().getTime()}.png`, { type: 'image/png' });
-
-                    // 3. 调用原生分享
-                    await navigator.share({
-                        title: `烧烤账单 - ${currentTable}号桌`,
-                        text: `总计: ${totalPriceSpan.textContent} Ks`,
-                        files: [file]
-                    });
-
-                } catch (error) {
-                    if (error.name === 'AbortError' || (error.message && error.message.includes('canceled'))) {
-                        // 用户取消分享，无需提示错误
-                    } else {
-                         // 发生其他错误，回退到打印
-                        console.error("Web Share API 分享失败:", error);
-                        alert("分享失败或设备限制，将调用浏览器打印...");
-                        window.print();
-                    }
-                }
-            } else {
-                // 不支持 Web Share API 的设备，使用浏览器原生打印功能
-                window.print();
-            }
-        }
-
-
-        /**
-         * 结算并清空当前桌子的订单
-         * (修改: 移除 window.open()，改为显示模态框)
-         */
-        async function settleAndClear() { 
+        function settleAndClear() {
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
 
             if (total > 0) {
-                if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
-                    
-                    let imageUrl;
-                    try {
-                        // 1. 生成账单图片URL
-                        imageUrl = await printBillToImage(); // 使用 await 等待图片生成
-                    } catch (e) {
-                        console.error("结算中断：图片生成失败", e);
-                        return;
-                    }
+                
+                // 1. 下载账单图片 (图片保存动作已包含在 printBillToImage 中)
+                printBillToImage();
 
-                    // 2. **关键修改：显示模态框**
-                    showModal(imageUrl); 
+                // 2. 记录历史订单到 LocalStorage
+                const todayDate = getTodayDateString();
+                const historyKey = `bbq_orders_by_date_${todayDate}`;
+                let dailyOrders = JSON.parse(localStorage.getItem(historyKey)) || [];
+                
+                dailyOrders.push({
+                    table: currentTable,
+                    timestamp: new Date().toISOString(),
+                    order: currentOrder,
+                    total: total
+                });
+                
+                localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
+                
+                // 3. 清空当前桌子的 LocalStorage 订单
+                localStorage.removeItem(`bbq_order_table_${currentTable}`);
 
-                    // 3. 记录历史订单到 LocalStorage 
-                    const todayDate = getTodayDateString();
-                    const historyKey = `bbq_orders_by_date_${todayDate}`;
-                    let dailyOrders = JSON.parse(localStorage.getItem(historyKey)) || [];
-                    
-                    dailyOrders.push({
-                        table: currentTable,
-                        timestamp: new Date().toISOString(),
-                        order: currentOrder,
-                        total: total
+                // 4. 清空界面上的数量和账单显示
+                const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
+                if (currentMenuContainer) {
+                    currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
+                        input.value = 0;
                     });
-                    
-                    localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
-                    
-                    // 4. 清空当前桌子的 LocalStorage 订单
-                    localStorage.removeItem(`bbq_order_table_${currentTable}`);
-
-                    // 5. 清空界面上的数量和账单显示
-                    const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
-                    if (currentMenuContainer) {
-                        currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
-                            input.value = 0;
-                        });
-                    }
-                    updateBill();
-                    
-                    // alert(`${currentTable}号桌结算成功！请在模态框中操作。`); // 移除 alert
                 }
+                updateBill();
+                
+                // 移除了 alert(`${currentTable}号桌结算成功！`); 
             } else {
                 alert('当前账单为空，无需结算。');
             }
@@ -1197,13 +1081,7 @@
                             </div>
                             <div class="item-controls" onclick="event.stopPropagation();">
                                 <button onclick="changeQuantity('${item.name}', 1, ${i})">+</button>
-                                <input type="number" 
-                                       class="quantity-input" 
-                                       data-item-name="${item.name}" 
-                                       data-table-number="${i}" 
-                                       value="${quantity}" 
-                                       oninput="updateBill()"
-                                       onchange="playSound(); vibrateDevice();">
+                                <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${i}" value="${quantity}" oninput="updateBill()">
                                 <button onclick="changeQuantity('${item.name}', -1, ${i})">-</button>
                             </div>
                         `;
@@ -1253,8 +1131,7 @@
             // 遍历当前桌子所有菜品，计算总价并构建订单数据
             quantityInputs.forEach(input => {
                 const itemName = input.getAttribute('data-item-name');
-                // 确保值是有效的数字，如果手动输入非数字，则默认为 0
-                const quantity = parseInt(input.value) || 0; 
+                const quantity = parseInt(input.value) || 0;
                 
                 if (quantity > 0) {
                     orderData[itemName] = quantity;
@@ -1305,8 +1182,9 @@
         // --- 菜单编辑和数据管理函数 ---
 
         /**
-         * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB，
+         * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB。
          * 图片字段依赖 handleImageUpload 提前更新内存数据。
+         * @param {boolean} silent - 是否静默执行（不显示 alert）。
          */
         async function saveCurrentEditsAndPersist(silent = false) {
             const nameInputs = document.querySelectorAll('.edit-name');
