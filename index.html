@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器 - 中文注释版</title>
+    <title>烧烤账单计算器10.13.20.36</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -106,14 +106,37 @@
         /* ----------------------- 顶部控制栏样式 ----------------------- */
         .top-bar {
             display: flex;
-            justify-content: flex-end;
+            justify-content: flex-end; /* 修改: 将所有元素靠右对齐 */
             align-items: center;
             margin-bottom: 20px;
             z-index: 100;
             flex-wrap: nowrap;
+            gap: 10px; /* 新增: 添加元素之间的间距 */
         }
+        /* 调整: 取消 .top-bar .dropdown 的左边距 */
         .top-bar .dropdown {
-            margin-left: 10px; 
+            margin-left: 0; 
+        }
+
+        /* 备注输入框容器样式 */
+        .note-input-container {
+            display: flex;
+            align-items: center;
+            /* 备注框尺寸控制 */
+            width: 100px; 
+            max-width: 150px; 
+        }
+
+        /* 备注输入框样式 */
+        .note-input {
+            padding: 8px;
+            border: 1px solid #ff7e5f;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border: none;
         }
 
         /* 下拉菜单基础样式 */
@@ -135,6 +158,11 @@
             transition: background-color 0.2s, transform 0.2s;
         }
         
+        /* 调整: 保持桌号按钮与设置按钮大小一致，方便居中 */
+        .table-selector-dropbtn {
+            padding: 8px 15px; /* 匹配 settings-dropbtn 的 padding */
+        }
+
         /* 设置按钮图标样式 */
         #settings-dropbtn {
             font-size: 24px;
@@ -188,13 +216,15 @@
         }
 
         /* 卡片容器基础样式 */
-        .container, .bill-details-wrapper, .summary-total {
+        .container, .bill-details-wrapper, .summary-total, .menu-editor-container, #summary-content {
             background-color: rgba(255, 255, 255, 0.4);
             padding: 25px;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             backdrop-filter: blur(10px);
             flex-shrink: 0;
+            /* 确保容器不会因为内部缩放内容而撑开水平滚动条 */
+            overflow-x: hidden; 
         }
         
         /* 账单明细容器 */
@@ -212,7 +242,74 @@
             color: #f39c12;
             font-weight: 600;
         }
+        
+        /* ----------------------- 移动端整体优化和 80% 缩放兼容性修复 ----------------------- */
+        @media (max-width: 767px) {
+            
+            /* 全局缩小页边距 */
+            body {
+                padding: 10px;
+            }
 
+            /* 调整容器内边距 */
+            .container, .bill-details-wrapper, .summary-total, .menu-editor-container, #summary-content {
+                padding: 15px; 
+            }
+
+            /* 调整顶部栏和备注输入框以适应小屏幕 */
+            .top-bar {
+                margin-bottom: 10px;
+            }
+            .note-input-container {
+                /* 允许备注输入框占据更多弹性空间，但限制最大宽度 */
+                flex-grow: 1; 
+                max-width: 40%; 
+                width: auto;
+            }
+            .note-input {
+                padding: 6px;
+                font-size: 12px;
+            }
+            .dropbtn {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+            #settings-dropbtn {
+                font-size: 20px;
+            }
+            
+            /* **核心修复: 对所有内容区域应用 80% 缩放及宽度补偿** */
+            #menu-area, 
+            .menu-editor-container, /* 编辑器容器本身 */
+            #summary-content { /* 汇总容器本身 */
+                /* 缩放整个区域到 80% */
+                transform: scale(0.8);
+                transform-origin: top center;
+                /* 调整宽度为 125% 补偿 80% 的缩放 (1/0.8 = 1.25) */
+                width: 125%; 
+                /* 调整左边距为 -12.5% 以居中被拉宽的元素 */
+                margin-left: -12.5%; 
+            }
+            
+            /* 优化缩放后菜单项的显示 */
+            .item-image {
+                width: 70px; /* 缩小图片 */
+                height: 70px;
+                margin-bottom: 5px;
+            }
+            .item-info h3 {
+                font-size: 0.9em; /* 缩小标题 */
+            }
+            .item-controls button {
+                width: 20px;
+                height: 20px;
+                font-size: 0.9em;
+            }
+            .item-controls input {
+                width: 25px;
+                font-size: 0.9em;
+            }
+        }
         /* ----------------------- 菜品分类样式 ----------------------- */
         .category-section {
             margin-top: 25px;
@@ -386,6 +483,15 @@
             color: #f39c12;
             padding-top: 15px;
         }
+
+        /* 备注显示区样式 (新增) */
+        #current-note-display {
+            text-align: right; 
+            margin-bottom: 10px; 
+            font-size: 1.1em; 
+            color: #555;
+            min-height: 25px; /* 确保占位 */
+        }
         
         .action-buttons {
             display: flex;
@@ -419,18 +525,6 @@
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             backdrop-filter: blur(10px);
-        }
-        /* New: Scale down Menu Editor on small screens (max-width: 767px) */
-        @media (max-width: 767px) {
-            #edit-content {
-                /* Scale to 80% */
-                transform: scale(0.8);
-                /* Scale from the top center */
-                transform-origin: top center;
-                /* Compensate for scaling to roughly center it and prevent unnecessary horizontal scrollbar on some devices */
-                width: 125%; 
-                margin-left: -12.5%; 
-            }
         }
         
         .menu-editor-container table {
@@ -565,13 +659,17 @@
 <body>
 
     <div class="top-bar">
+        <div class="note-input-container">
+            <input type="text" id="order-note-input" placeholder="输入备注..." class="note-input">
+        </div>
+
         <div class="dropdown table-selector-dropdown">
             <button id="table-selector-dropbtn" class="dropbtn table-selector-dropbtn">桌号</button>
             <div id="table-dropdown-content" class="dropdown-content">
                 </div>
         </div>
 
-        <div class="dropdown">
+        <div class="dropdown settings-dropdown">
             <button id="settings-dropbtn" class="dropbtn">&#9881;</button>
             <div id="action-dropdown" class="dropdown-content">
                 <a href="#" id="summary-link" onclick="toggleSummaryMode()">查看汇总</a>
@@ -591,6 +689,7 @@
         </div>
         
         <div class="summary-total">
+            <div id="current-note-display"></div>
             <hr>
             <div class="total">
                 <p>总计：<span id="total-price">0.00</span> Ks</p>
@@ -661,6 +760,10 @@
         const editLink = document.getElementById('edit-link');
         const summaryLink = document.getElementById('summary-link');
         const printArea = document.getElementById('print-area'); 
+        
+        // 新增：备注输入框和显示区域的引用
+        const orderNoteInput = document.getElementById('order-note-input');
+        const currentNoteDisplay = document.getElementById('current-note-display'); 
 
         const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIiByeD0iOCIgZmlsbD0iI0ZGM0E1MCIvPgo8cGF0aCBkPSJNMzUgMzVMMzUgMjVNMzUgNDVNNDUgMzVMMjUgMzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=";
 
@@ -874,6 +977,13 @@
             return savedOrder ? JSON.parse(savedOrder) : {};
         }
 
+        /**
+         * 从 LocalStorage 加载指定桌子的备注 (新增)
+         */
+        function loadTableNote(tableNumber) {
+            return localStorage.getItem(`bbq_note_table_${tableNumber}`) || '';
+        }
+
         // --- 核心点单逻辑函数 ---
         
         /** * 切换当前操作的桌号 */
@@ -893,6 +1003,9 @@
 
             tableSelectorDropbtn.textContent = `${currentTable}号桌`;
             settleButton.textContent = `结算并清空${tableNumber}号桌`;
+            
+            // 加载备注信息到输入框
+            orderNoteInput.value = loadTableNote(currentTable); 
 
             setTimeout(() => {
                 if (nextMenuContainer) {
@@ -909,6 +1022,7 @@
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
             const todayDate = getTodayDateString();
+            const currentNote = loadTableNote(currentTable); // 获取备注信息
             
             const now = new Date();
             const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -920,7 +1034,7 @@
                     <p>日期: ${todayDate}</p>
                     <p>时间: ${timeString}</p>
                     <p>桌号: ${currentTable}号桌</p>
-                </div>
+                    ${currentNote ? `<p>备注: ${currentNote}</p>` : ''} </div>
                 <hr>
             `;
             
@@ -996,6 +1110,7 @@
         function settleAndClear() {
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
+            const currentNote = loadTableNote(currentTable); // 获取备注
 
             if (total > 0) {
                 if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
@@ -1011,13 +1126,15 @@
                         table: currentTable,
                         timestamp: new Date().toISOString(),
                         order: currentOrder,
-                        total: total
+                        total: total,
+                        note: currentNote // 记录备注
                     });
                     
                     localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
                     
-                    // 3. 清空当前桌子的 LocalStorage 订单
+                    // 3. 清空当前桌子的 LocalStorage 订单和备注
                     localStorage.removeItem(`bbq_order_table_${currentTable}`);
+                    localStorage.removeItem(`bbq_note_table_${currentTable}`);
 
                     // 4. 清空界面上的数量和账单显示
                     const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
@@ -1026,6 +1143,7 @@
                             input.value = 0;
                         });
                     }
+                    orderNoteInput.value = ''; // 清空备注输入框
                     updateBill();
                     
                     alert(`${currentTable}号桌结算成功！`);
@@ -1137,7 +1255,12 @@
             const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
             if (!currentMenuContainer) return;
 
-            // 注意：因为菜单现在是按分类分组的，我们需要遍历整个容器来查找所有输入框
+            // 1. 处理备注
+            const currentNote = orderNoteInput.value.trim();
+            localStorage.setItem(`bbq_note_table_${currentTable}`, currentNote);
+            currentNoteDisplay.textContent = currentNote ? `备注: ${currentNote}` : '';
+
+            // 2. 处理订单
             const quantityInputs = currentMenuContainer.querySelectorAll('.quantity-input');
             const orderData = {};
             let total = 0;
@@ -1422,11 +1545,14 @@
                         itemsHTML += `<li>${itemName} x ${quantity} = ${subtotal.toFixed(0)} Ks</li>`;
                     }
                     
+                    // 获取备注信息
+                    const noteDisplay = order.note ? `<p>备注: ${order.note}</p>` : '';
+
                     ordersHTML += `
                         <div class="order-details">
                             <p>桌号: ${order.table}号桌</p>
                             <p>时间: ${timeString}</p>
-                            <ul class="order-items">${itemsHTML}</ul>
+                            ${noteDisplay} <ul class="order-items">${itemsHTML}</ul>
                             <p>小计: ${order.total.toFixed(0)} Ks</p>
                         </div>
                     `;
@@ -1454,7 +1580,7 @@
          */
         function exportToExcel() {
             const data = [];
-            data.push(['日期', '桌号', '时间', '菜品', '数量', '单价', '小计', '订单总计']);
+            data.push(['日期', '桌号', '时间', '备注', '菜品', '数量', '单价', '小计', '订单总计']);
             
             // 获取所有日期键
             const keys = [];
@@ -1481,12 +1607,12 @@
                             const quantity = order.order[itemName];
                             const item = menuItems.find(i => i.name === itemName) || { price: 0 };
                             const subtotal = item.price * quantity;
-                            data.push([date, order.table, timeString, itemName, quantity, item.price, subtotal, '']);
+                            data.push([date, order.table, timeString, order.note || '', itemName, quantity, item.price, subtotal, '']);
                         }
                         if (hasItems) {
-                            data[data.length - 1][7] = order.total; // 在最后一个项添加订单总计
+                            data[data.length - 1][8] = order.total; // 在最后一个项添加订单总计
                         } else {
-                            data.push([date, order.table, timeString, '', '', '', '', order.total]);
+                            data.push([date, order.table, timeString, order.note || '', '', '', '', '', order.total]);
                         }
                     }
                 }
@@ -1545,6 +1671,9 @@
                     currentTable = 1; // Default to 1 if not found or invalid
                 }
                 
+                orderNoteInput.addEventListener('input', updateBill); // 监听备注输入框变化
+                orderNoteInput.value = loadTableNote(currentTable); // 初始加载备注
+
                 await renderAllMenus();
                 updateBill();
                 
