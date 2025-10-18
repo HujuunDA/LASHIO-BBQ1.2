@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.18.21.54</title>
+    <title>烧烤账单计算器10.18.22.13</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -204,6 +204,20 @@
         .dropdown:hover .dropdown-content {
             display: block;
         }
+
+        /* ----------------------- 新增样式: 添加桌号链接居中 ----------------------- */
+        .dropdown-content a.add-table-link {
+            text-align: center; /* 使文本内容居中 */
+            font-weight: 600;    /* 增加粗细以强调 */
+            color: #ff7e5f;      /* 使用主题色 */
+            background-color: rgba(255, 126, 95, 0.1); /* 浅主题色背景 */
+            border-bottom: 1px solid #ffc3a0; /* 底部加一道细线 */
+        }
+
+        .dropdown-content a.add-table-link:hover {
+            background-color: rgba(255, 126, 95, 0.2);
+        }
+        /* ---------------------------------------------------------------------- */
         
         /* ----------------------- 主体内容区样式 ----------------------- */
         .main-container {
