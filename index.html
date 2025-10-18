@@ -26,13 +26,11 @@
 
         /* 关键：控制不同桌子菜单的显示状态 */
         .table-menu-container {
+            /* 修正：不再需要 opacity 动画，直接用 display 减少重绘 */
             display: none;
-            opacity: 0;
-            transition: opacity 0.4s ease-in-out;
         }
         .table-menu-container.active {
             display: block; /* 使用 block 布局，以便分类部分可以垂直堆叠 */
-            opacity: 1;
         }
         
         /* 隐藏数量输入框的上下箭头 */
@@ -118,25 +116,25 @@
             margin-left: 0; 
         }
 
-        /* 备注输入框容器样式 */
+        /* 备注输入框容器样式 - **修改以匹配按钮尺寸** */
         .note-input-container {
             display: flex;
             align-items: center;
-            /* 备注框尺寸控制 */
-            width: 100px; 
-            max-width: 150px; 
+            /* 统一大小的参考值：dropbtn 默认高度是 12px*2(padding) + font-size */
+            width: 150px; /* 默认宽度 */
         }
 
-        /* 备注输入框样式 */
+        /* 备注输入框样式 - **修改以匹配按钮尺寸** */
         .note-input {
-            padding: 8px;
+            padding: 12px 20px; /* 匹配 .dropbtn 的 padding */
             border: 1px solid #ff7e5f;
             border-radius: 8px;
             width: 100%;
             box-sizing: border-box;
-            font-size: 14px;
+            font-size: 14px; /* 略小于 dropbtn 的 16px */
             background-color: rgba(255, 255, 255, 0.8);
             border: none;
+            height: 44px; /* 统一高度，根据 padding 和 font-size 估算 */
         }
 
         /* 下拉菜单基础样式 */
@@ -145,7 +143,7 @@
             display: inline-block;
         }
 
-        /* 下拉菜单按钮 */
+        /* 下拉菜单按钮 - **统一大小** */
         .dropbtn {
             background-color: #ff7e5f;
             color: white;
@@ -156,17 +154,23 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: background-color 0.2s, transform 0.2s;
+            /* 统一高度，确保与备注框对齐 */
+            height: 44px; 
+            display: flex; /* 使用 flex 居中文字/图标 */
+            align-items: center;
+            justify-content: center;
         }
         
-        /* 调整: 保持桌号按钮与设置按钮大小一致，方便居中 */
+        /* 调整: 取消 table-selector-dropbtn 的特殊 padding */
         .table-selector-dropbtn {
-            padding: 8px 15px; /* 匹配 settings-dropbtn 的 padding */
+            /* 保持默认的 12px 20px padding */
         }
-
-        /* 设置按钮图标样式 */
+        
+        /* 设置按钮图标样式 - **统一大小** */
         #settings-dropbtn {
             font-size: 24px;
-            padding: 8px 15px;
+            width: 44px; /* 设置宽度，使其成为正方形或匹配其他按钮宽度 */
+            padding: 0; /* 移除 padding，由 height/width 撑开 */
         }
 
         /* 按钮悬停效果 */
@@ -259,25 +263,43 @@
             /* 调整顶部栏和备注输入框以适应小屏幕 */
             .top-bar {
                 margin-bottom: 10px;
+                /* 允许换行，以防元素过多导致溢出 */
+                flex-wrap: wrap; 
             }
             .note-input-container {
                 /* 允许备注输入框占据更多弹性空间，但限制最大宽度 */
                 flex-grow: 1; 
-                max-width: 40%; 
-                width: auto;
+                max-width: none; 
+                width: auto; /* 允许弹性增长 */
+                order: 1; /* 确保在小屏幕上备注框优先显示或独立一行 */
+                margin-bottom: 10px; /* 底部留白 */
             }
+            
+            /* 确保备注输入框在小屏幕上保持与按钮组一致的高度 */
             .note-input {
-                padding: 6px;
-                font-size: 12px;
+                padding: 8px 10px; /* 调整 padding 以匹配 dropbtn 的小屏尺寸 */
+                font-size: 14px;
+                height: 36px; /* 匹配小屏 dropbtn 的高度 */
             }
+            
+            /* 小屏按钮统一尺寸 */
             .dropbtn {
                 padding: 8px 10px;
                 font-size: 14px;
+                height: 36px; /* 统一小屏高度 */
+                order: 2; /* 确保按钮组在备注框之后 */
             }
             #settings-dropbtn {
                 font-size: 20px;
+                width: 36px;
+                height: 36px;
             }
-            
+            .table-selector-dropdown {
+                 order: 3;
+            }
+            .settings-dropdown {
+                 order: 4;
+            }
             /* **核心修复: 对所有内容区域应用 80% 缩放及宽度补偿** */
             #menu-area, 
             .menu-editor-container, /* 编辑器容器本身 */
@@ -742,7 +764,8 @@
         
         // --- 全局变量和元素引用 ---
         let menuItems = [];
-        const numTables = 10;
+        // **修改点 1: 动态桌号管理**
+        let activeTables = []; // 存储当前正在开单的桌号
         let currentTable = 1;
         
         let isEditMode = false;
@@ -782,7 +805,7 @@
             }
         }
 
-        // --- IndexedDB 数据库操作函数 ---
+        // --- IndexedDB 数据库操作函数 (未修改) ---
 
         /** * 打开或创建 IndexedDB 数据库 */
         function openDB() {
@@ -890,7 +913,7 @@
             }
         }
 
-        // --- 辅助工具函数 ---
+        // --- 辅助工具函数 (未修改) ---
 
         /**
          * 播放音效（用于点单反馈） 
@@ -991,12 +1014,32 @@
         async function switchTable(tableNumber) {
             if (isEditMode || isSummaryMode) return;
             
+            // **修改点: 新增桌号切换时的震动和声音反馈**
+            playSound(); 
+            vibrateDevice(); 
+            
             // 切换菜单容器的显示状态 (使用 setTimeout 确保平滑切换)
             const currentMenuContainer = document.querySelector(`.table-menu-container.active`);
             const nextMenuContainer = document.getElementById(`table-${tableNumber}-menu`);
+            
             if (currentMenuContainer) {
                 currentMenuContainer.classList.remove('active');
             }
+            
+            // **动态渲染优化：如果目标菜单不存在，则重新渲染所有菜单**
+            if (!nextMenuContainer) {
+                currentTable = tableNumber;
+                await renderAllMenus();
+                generateTableSelectors();
+                // 再次获取新渲染的菜单
+                const newlyRenderedMenu = document.getElementById(`table-${tableNumber}-menu`);
+                if(newlyRenderedMenu) {
+                    newlyRenderedMenu.classList.add('active');
+                }
+            } else {
+                nextMenuContainer.classList.add('active');
+            }
+
 
             currentTable = tableNumber;
             localStorage.setItem('bbq_last_table', currentTable);
@@ -1007,14 +1050,55 @@
             // 加载备注信息到输入框
             orderNoteInput.value = loadTableNote(currentTable); 
 
-            // **性能优化点**: 延迟更新账单，让菜单切换动画优先完成
+            // **性能优化点**: 延迟更新账单
             setTimeout(() => {
-                if (nextMenuContainer) {
-                    nextMenuContainer.classList.add('active');
-                }
                 updateBill(); 
-            }, 100);
+            }, 50);
         }
+        
+        /** * **新增功能:** 查找最小的、未被占用的桌号
+         */
+        function findNextAvailableTable() {
+            const sortedTables = [...activeTables].sort((a, b) => a - b);
+            let nextTable = 1;
+
+            // 查找数组中缺失的最小正整数
+            for (const tableNum of sortedTables) {
+                if (tableNum === nextTable) {
+                    nextTable++;
+                } else if (tableNum > nextTable) {
+                    // 找到空缺
+                    return nextTable;
+                }
+            }
+            // 如果没有空缺，则返回下一个最大的数字
+            return nextTable;
+        }
+
+        /**
+         * **新增功能:** 添加一个新的动态桌号
+         */
+        async function addNewTable() {
+            const newTableNumber = findNextAvailableTable();
+            
+            // 如果新桌号已经存在于 activeTables 中，则不执行任何操作（理论上 findNextAvailableTable 不会返回已存在的）
+            if (activeTables.includes(newTableNumber)) {
+                return;
+            }
+            
+            activeTables.push(newTableNumber);
+            activeTables.sort((a, b) => a - b); // 保持排序
+
+            // 1. 更新全局状态，切换到新桌号 (switchTable 内部已包含反馈)
+            await switchTable(newTableNumber);
+
+            // 2. 更新桌号下拉菜单
+            generateTableSelectors();
+            
+            // 3. 提示
+            alert(`已添加 ${newTableNumber} 号桌`);
+        }
+
 
         /**
          * 将账单内容转换为图片并下载 (此功能本身性能开销大，但在结算时只发生一次)
@@ -1022,7 +1106,6 @@
         function printBillToImage() {
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
-            const todayDate = getTodayDateString();
             const currentNote = loadTableNote(currentTable); 
             
             const now = new Date();
@@ -1032,7 +1115,7 @@
             let printContent = `
                 <h2>账单</h2> 
                 <div class="print-info">
-                    <p>日期: ${todayDate}</p>
+                    <p>日期: ${getTodayDateString()}</p>
                     <p>时间: ${timeString}</p>
                     <p>桌号: ${currentTable}号桌</p>
                     ${currentNote ? `<p>备注: ${currentNote}</p>` : ''} 
@@ -1072,7 +1155,6 @@
             void printArea.offsetWidth; 
 
             // 3. 使用 html2canvas 将 DOM 元素转为 Canvas
-            // **性能提示**: html2canvas 是性能瓶颈，建议告知用户生成图片需要几秒时间
             html2canvas(printArea, { 
                 scale: 2, 
                 useCORS: true, 
@@ -1082,7 +1164,7 @@
                 
                 const a = document.createElement('a');
                 a.href = imgUrl;
-                a.download = `账单-${currentTable}号桌-${todayDate}-${now.getTime()}.png`;
+                a.download = `账单-${currentTable}号桌-${getTodayDateString()}-${now.getTime()}.png`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1107,16 +1189,17 @@
         }
 
         /**
-         * 结算并清空当前桌子的订单
+         * **修改功能:** 结算并清空当前桌子的订单 (新增回收桌号逻辑)
          */
         function settleAndClear() {
-            const currentOrder = loadCurrentOrder(currentTable);
+            const tableToSettle = currentTable;
+            const currentOrder = loadCurrentOrder(tableToSettle);
             const total = calculateTotal(currentOrder);
-            const currentNote = loadTableNote(currentTable); 
+            const currentNote = loadTableNote(tableToSettle); 
 
             if (total > 0) {
-                if (confirm(`确定要结算并清空${currentTable}号桌账单吗？该订单将被记录在历史中。`)) {
-                    // 1. 下载账单图片 (同步调用，等待图片生成)
+                if (confirm(`确定要结算并清空${tableToSettle}号桌账单吗？该订单将被记录在历史中。`)) {
+                    // 1. 下载账单图片 (同步调用)
                     printBillToImage();
 
                     // 2. 记录历史订单到 LocalStorage
@@ -1125,7 +1208,7 @@
                     let dailyOrders = JSON.parse(localStorage.getItem(historyKey)) || [];
                     
                     dailyOrders.push({
-                        table: currentTable,
+                        table: tableToSettle,
                         timestamp: new Date().toISOString(),
                         order: currentOrder,
                         total: total,
@@ -1135,40 +1218,53 @@
                     localStorage.setItem(historyKey, JSON.stringify(dailyOrders));
                     
                     // 3. 清空当前桌子的 LocalStorage 订单和备注
-                    localStorage.removeItem(`bbq_order_table_${currentTable}`);
-                    localStorage.removeItem(`bbq_note_table_${currentTable}`);
+                    localStorage.removeItem(`bbq_order_table_${tableToSettle}`);
+                    localStorage.removeItem(`bbq_note_table_${tableToSettle}`);
 
-                    // 4. 清空界面上的数量和账单显示
-                    const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
-                    if (currentMenuContainer) {
-                        // **性能优化点**: 使用 requestAnimationFrame 批量更新输入框
-                        requestAnimationFrame(() => {
-                            currentMenuContainer.querySelectorAll('.quantity-input').forEach(input => {
-                                input.value = 0;
-                            });
-                            orderNoteInput.value = ''; 
-                            updateBill();
-                        });
-                    } else {
-                        orderNoteInput.value = ''; 
-                        updateBill();
+                    // 4. **核心改动：回收桌号并切换**
+                    
+                    // 从 activeTables 中移除当前桌号
+                    const index = activeTables.indexOf(tableToSettle);
+                    if (index > -1) {
+                        activeTables.splice(index, 1);
                     }
                     
-                    alert(`${currentTable}号桌结算成功！`);
+                    // 移除对应的菜单 DOM 结构
+                    const settledMenuContainer = document.getElementById(`table-${tableToSettle}-menu`);
+                    if (settledMenuContainer) {
+                        settledMenuContainer.remove();
+                    }
+
+                    // 确定下一个要显示的桌号
+                    let nextTableToShow = 1;
+                    if (activeTables.length > 0) {
+                        nextTableToShow = activeTables[0]; // 默认切换到最小的活跃桌
+                    } else {
+                        // 如果所有桌子都结算完了，强制保证 1 号桌存在 (或重新添加 1 号桌)
+                        activeTables.push(1); 
+                        nextTableToShow = 1;
+                    }
+                    
+                    // 切换到下一个桌号并更新 UI
+                    switchTable(nextTableToShow); 
+                    
+                    alert(`${tableToSettle}号桌结算成功并已回收！`);
                 }
             } else {
                 alert('当前账单为空，无需结算。');
             }
         }
         
-        /** * 预加载并渲染所有桌子的菜单界面 */
+        /** * **修改功能:** 预加载并渲染所有**活跃**桌子的菜单界面 
+         */
         async function renderAllMenus() {
             if (menuItems.length === 0) {
                 await loadMenuItems();
             }
+            // **性能优化：只保留当前活跃的菜单 DOM，移除所有非活跃的**
             menuArea.innerHTML = '';
 
-            // 1. Group items by category
+            // 1. Group items by category (一次性操作)
             const categorizedItems = menuItems.reduce((acc, item) => {
                 const category = item.category && item.category.trim() !== '' ? item.category.trim() : "其他"; 
                 if (!acc[category]) {
@@ -1177,18 +1273,17 @@
                 acc[category].push(item);
                 return acc;
             }, {});
-            
-            // 2. Render for each table
-            for (let i = 1; i <= numTables; i++) {
+            const sortedCategories = Object.keys(categorizedItems).sort();
+
+            // 2. Render only for active tables
+            for (const tableNum of activeTables) {
                 const tableMenuContainer = document.createElement('div');
-                tableMenuContainer.id = `table-${i}-menu`;
+                tableMenuContainer.id = `table-${tableNum}-menu`;
                 tableMenuContainer.classList.add('table-menu-container');
 
-                const order = loadCurrentOrder(i);
+                const order = loadCurrentOrder(tableNum);
                 
                 // 3. Render items grouped by category
-                const sortedCategories = Object.keys(categorizedItems).sort();
-
                 for (const category of sortedCategories) {
                     const categorySection = document.createElement('div');
                     categorySection.className = 'category-section';
@@ -1207,10 +1302,9 @@
                         // 菜品项的 HTML 结构
                         const itemDiv = document.createElement('div');
                         itemDiv.classList.add('item');
-                        // 优化: 将 data-item-name 属性直接放在 itemDiv 上，方便点击时识别
                         itemDiv.setAttribute('data-item-name', item.name);
-                        itemDiv.setAttribute('data-table-number', i);
-                        itemDiv.setAttribute('onclick', `changeQuantityFromCard(event, '${item.name}', 1, ${i})`); 
+                        itemDiv.setAttribute('data-table-number', tableNum);
+                        itemDiv.setAttribute('onclick', `changeQuantityFromCard(event, '${item.name}', 1, ${tableNum})`); 
 
                         itemDiv.innerHTML = `
                             <img src="${item.image || defaultPlaceholder}" alt="${item.name}" class="item-image">
@@ -1219,9 +1313,9 @@
                                 <p>价格: ${item.price.toFixed(0)} Ks</p>
                             </div>
                             <div class="item-controls" onclick="event.stopPropagation();">
-                                <button onclick="changeQuantity('${item.name}', 1, ${i})">+</button>
-                                <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${i}" value="${quantity}" oninput="updateBill()">
-                                <button onclick="changeQuantity('${item.name}', -1, ${i})">-</button>
+                                <button onclick="changeQuantity('${item.name}', 1, ${tableNum})">+</button>
+                                <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${tableNum}" value="${quantity}" oninput="updateBill()">
+                                <button onclick="changeQuantity('${item.name}', -1, ${tableNum})">-</button>
                             </div>
                         `;
                         content.appendChild(itemDiv);
@@ -1233,6 +1327,7 @@
                 
                 menuArea.appendChild(tableMenuContainer);
             }
+            
             // 初始显示当前桌子
             const currentMenu = document.getElementById(`table-${currentTable}-menu`);
             if (currentMenu) {
@@ -1257,6 +1352,7 @@
             vibrateDevice();
 
             // **性能优化点**: 仅查找和更新当前的输入框值，而不是遍历整个 DOM
+            // 注意：因为现在只有活跃的桌子才有 DOM，所以查找是高效的
             const input = document.querySelector(`.quantity-input[data-item-name='${itemName}'][data-table-number='${tableNumber}']`);
             if (!input) return;
             
@@ -1278,7 +1374,13 @@
             // **性能优化核心**: 减少 DOM 操作，只更新/增删必要的元素
             
             const currentMenuContainer = document.getElementById(`table-${currentTable}-menu`);
-            if (!currentMenuContainer) return;
+            // 如果当前桌号菜单 DOM 结构不存在 (例如刚刚被回收)，则不执行更新
+            if (!currentMenuContainer) {
+                 billDetails.innerHTML = '';
+                 totalPriceSpan.textContent = '0';
+                 currentNoteDisplay.textContent = ''; 
+                 return;
+            }
 
             // 1. 处理备注
             const currentNote = orderNoteInput.value.trim();
@@ -1351,10 +1453,23 @@
             localStorage.setItem(`bbq_order_table_${currentTable}`, JSON.stringify(orderData));
         }
         
-        /** * 动态生成桌号选择下拉菜单的选项 */
+        /** * 动态生成桌号选择下拉菜单的选项 (基于 activeTables) */
         function generateTableSelectors() {
             tableDropdownContent.innerHTML = '';
-            for (let i = 1; i <= numTables; i++) {
+            
+            // **核心修改：添加“+ 添加桌号”链接作为第一个元素**
+            const addTableLink = document.createElement('a');
+            addTableLink.href = '#';
+            addTableLink.textContent = '+ 添加新桌号';
+            addTableLink.classList.add('add-table-link'); // 使用新的 CSS 样式
+            addTableLink.onclick = (e) => {
+                e.preventDefault();
+                addNewTable();
+            };
+            tableDropdownContent.appendChild(addTableLink);
+
+            // **修改点 2: 遍历 activeTables 添加桌号**
+            activeTables.forEach(i => {
                 const link = document.createElement('a');
                 link.href = '#';
                 link.textContent = `${i}号桌`;
@@ -1363,10 +1478,10 @@
                     switchTable(i);
                 };
                 tableDropdownContent.appendChild(link);
-            }
+            });
         }
 
-        // --- 菜单编辑和数据管理函数 (未更改) ---
+        // --- 菜单编辑和数据管理函数 (未修改) ---
 
         /**
          * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB。
@@ -1520,7 +1635,7 @@
             await renderMenuEditor();
         }
         
-        // --- 汇总模式函数 (未更改) ---
+        // --- 汇总模式函数 (未修改) ---
 
         /**
          * 切换到历史汇总模式
@@ -1690,30 +1805,49 @@
             async function updateUI() {
                 await loadMenuItems();
                 await renderAllMenus();
+                generateTableSelectors();
                 updateBill();
                 settleButton.textContent = `结算并清空${currentTable}号桌`;
             }
 
             /** * 应用程序初始化函数 */
             async function initializeUI() {
-                // 确保 AudioContext 在 DOM 加载后被创建，但可能仍处于 'suspended' 状态
                 initAudioContext(); 
-                
                 await openDB();
                 await loadMenuItems();
-                generateTableSelectors();
                 
+                // **修改点 3: 初始化 activeTables**
+                // 1. 检查是否有历史活跃桌号（如果程序在开单中关闭）
+                const activeOrderKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('bbq_order_table_')) {
+                        const tableNum = parseInt(key.replace('bbq_order_table_', ''));
+                        if (!isNaN(tableNum) && JSON.parse(localStorage.getItem(key)) && Object.keys(JSON.parse(localStorage.getItem(key))).length > 0) {
+                            activeOrderKeys.push(tableNum);
+                        }
+                    }
+                }
+                
+                if (activeOrderKeys.length > 0) {
+                    activeTables = activeOrderKeys.sort((a, b) => a - b);
+                } else {
+                    activeTables = [1]; // 强制确保 1 号桌始终存在
+                }
+
+                // 2. 确定当前桌号
                 const lastTable = localStorage.getItem('bbq_last_table');
-                if (lastTable && !isNaN(parseInt(lastTable))) {
+                if (lastTable && !isNaN(parseInt(lastTable)) && activeTables.includes(parseInt(lastTable))) {
                     currentTable = parseInt(lastTable);
                 } else {
-                    currentTable = 1; 
+                    currentTable = activeTables[0] || 1; 
                 }
                 
                 orderNoteInput.addEventListener('input', updateBill); // 监听备注输入框变化
                 orderNoteInput.value = loadTableNote(currentTable); // 初始加载备注
 
-                await renderAllMenus();
+                await renderAllMenus(); // 渲染所有活跃桌号的菜单 DOM
+                generateTableSelectors(); // 填充下拉菜单
                 updateBill();
                 
                 settleButton.textContent = `结算并清空${currentTable}号桌`;
