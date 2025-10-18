@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.18.22.13</title>
+    <title>烧烤账单计算器10.18.22.37</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -178,7 +178,7 @@
             display: none;
             position: absolute;
             background-color: rgba(255, 255, 255, 0.9);
-            min-width: 160px;
+            min-width: 100px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
             z-index: 1;
             right: 0;
@@ -194,30 +194,24 @@
             text-decoration: none;
             display: block;
             transition: background-color 0.2s;
+            /* 【修改点 1】靠右对齐 */
+            text-align: right; 
         }
 
         .dropdown-content a:hover {
             background-color: rgba(255, 126, 95, 0.2);
         }
 
+        /* 【修改点 2】新增：自定义添加桌号链接样式 */
+        .add-table-link {
+            color: #27ae60 !important; /* 绿色 */
+            font-weight: bold;
+        }
+
         /* 鼠标悬停在下拉菜单按钮上时显示内容 */
         .dropdown:hover .dropdown-content {
             display: block;
         }
-
-        /* ----------------------- 新增样式: 添加桌号链接居中 ----------------------- */
-        .dropdown-content a.add-table-link {
-            text-align: center; /* 使文本内容居中 */
-            font-weight: 600;    /* 增加粗细以强调 */
-            color: #ff7e5f;      /* 使用主题色 */
-            background-color: rgba(255, 126, 95, 0.1); /* 浅主题色背景 */
-            border-bottom: 1px solid #ffc3a0; /* 底部加一道细线 */
-        }
-
-        .dropdown-content a.add-table-link:hover {
-            background-color: rgba(255, 126, 95, 0.2);
-        }
-        /* ---------------------------------------------------------------------- */
         
         /* ----------------------- 主体内容区样式 ----------------------- */
         .main-container {
@@ -815,6 +809,10 @@
         // 新增：备注输入框和显示区域的引用
         const orderNoteInput = document.getElementById('order-note-input');
         const currentNoteDisplay = document.getElementById('current-note-display'); 
+        
+        // 【新增】桌号选择器容器和备注输入框容器的引用
+        const tableSelectorContainer = document.querySelector('.table-selector-dropdown'); 
+        const noteInputContainer = document.querySelector('.note-input-container'); 
 
         const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMuLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI3MCIgaGVpZ2h0PSI3MCIgcng9IjgiIGZpbGw9IiNGRjNBNTAiLz4KPHBhdGggZD09Ik0zNSAzNUwzNSAyNUwzNSA0NU00NSAzNUwyNSAzNSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cg==";
 
@@ -1595,12 +1593,22 @@
                 mainContent.style.display = 'flex';
                 editContent.style.display = 'none';
                 editLink.textContent = '编辑菜单';
+                
+                // 【新增】显示控制项
+                tableSelectorContainer.style.display = 'inline-block';
+                noteInputContainer.style.display = 'flex';
+                
                 await updateUI();
             } else {
                 mainContent.style.display = 'none';
                 editContent.style.display = 'block';
                 summaryContent.style.display = 'none';
                 editLink.textContent = '完成编辑';
+                
+                // 【新增】隐藏控制项
+                tableSelectorContainer.style.display = 'none';
+                noteInputContainer.style.display = 'none';
+                
                 await renderMenuEditor();
             }
             isEditMode = !isEditMode;
@@ -1720,11 +1728,20 @@
                 editContent.style.display = 'none';
                 summaryContent.style.display = 'block';
                 summaryLink.textContent = '返回点单';
+                
+                // 【新增】隐藏控制项
+                tableSelectorContainer.style.display = 'none';
+                noteInputContainer.style.display = 'none';
+
                 renderSummary();
             } else {
                 mainContent.style.display = 'flex';
                 summaryContent.style.display = 'none';
                 summaryLink.textContent = '查看汇总';
+                
+                // 【新增】显示控制项
+                tableSelectorContainer.style.display = 'inline-block';
+                noteInputContainer.style.display = 'flex';
             }
         }
         
@@ -1791,7 +1808,7 @@
                 const section = document.createElement('div');
                 section.className = 'daily-summary-section';
                 section.innerHTML = `
-                    <h3>${date}</h3>
+                    <h3>${date}}</h3>
                     <p>订单数量: ${dailyOrders.length}</p>
                     <p class="daily-total">当日总营业额: ${dailyTotal.toFixed(0)} Ks</p>
                     ${ordersHTML}
