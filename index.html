@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.13.20.39</title>
+    <title>烧烤账单计算器10.18.19.50</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -1059,7 +1059,8 @@
         /** * **新增功能:** 查找最小的、未被占用的桌号
          */
         function findNextAvailableTable() {
-            const sortedTables = [...activeTables].sort((a, b) => a - b);
+            // 确保 activeTables 包含有效数字且已排序
+            const sortedTables = [...activeTables].filter(t => typeof t === 'number' && !isNaN(t)).sort((a, b) => a - b);
             let nextTable = 1;
 
             // 查找数组中缺失的最小正整数
@@ -1076,27 +1077,69 @@
         }
 
         /**
-         * **新增功能:** 添加一个新的动态桌号
+         * **修改功能:** 添加一个新的动态桌号，支持自定义
          */
         async function addNewTable() {
-            const newTableNumber = findNextAvailableTable();
+            // 1. 计算默认桌号 (最小可用)
+            const defaultTableNumber = findNextAvailableTable();
             
-            // 如果新桌号已经存在于 activeTables 中，则不执行任何操作（理论上 findNextAvailableTable 不会返回已存在的）
-            if (activeTables.includes(newTableNumber)) {
+            // 2. 弹出输入框供用户自定义
+            const customInput = prompt(`输入新桌号 (数字或字母/中文)，留空则使用默认桌号: ${defaultTableNumber} 号桌`);
+
+            let newTableIdentifier;
+
+            if (customInput !== null && customInput.trim() !== "") {
+                // 用户输入了自定义内容
+                const trimmedInput = customInput.trim();
+                
+                // 尝试解析为数字 (如果能转为数字，则保留数字类型)
+                const numberCheck = parseInt(trimmedInput);
+
+                if (!isNaN(numberCheck) && numberCheck > 0 && String(numberCheck) === trimmedInput) {
+                    newTableIdentifier = numberCheck;
+                } else {
+                    // 保持为字符串 (支持 'A桌', '包厢1' 等)
+                    newTableIdentifier = trimmedInput;
+                }
+            } else {
+                // 用户点击了取消或留空，使用默认桌号
+                newTableIdentifier = defaultTableNumber;
+            }
+            
+            // 3. 校验新桌号是否已存在
+            if (activeTables.includes(newTableIdentifier)) {
+                alert(`桌号 "${newTableIdentifier}" 已存在，请重新输入。`);
                 return;
             }
             
-            activeTables.push(newTableNumber);
-            activeTables.sort((a, b) => a - b); // 保持排序
+            // 4. 添加到活跃列表
+            activeTables.push(newTableIdentifier);
+            
+            // 排序: 数字在前，字符串在后 (简化排序，全部转为字符串再按数字/字典序混合排序)
+            activeTables.sort((a, b) => {
+                // 确保数字排序优先于字符串
+                const aIsNum = typeof a === 'number' || (typeof a === 'string' && !isNaN(parseInt(a)));
+                const bIsNum = typeof b === 'number' || (typeof b === 'string' && !isNaN(parseInt(b)));
+                
+                if (aIsNum && bIsNum) {
+                    return (parseInt(a) || Infinity) - (parseInt(b) || Infinity);
+                } else if (aIsNum) {
+                    return -1; // 数字在前
+                } else if (bIsNum) {
+                    return 1;  // 字符串在后
+                } else {
+                    return String(a).localeCompare(String(b)); // 字符串按字典序
+                }
+            }); 
+            
+            // 5. 更新全局状态，切换到新桌号
+            await switchTable(newTableIdentifier);
 
-            // 1. 更新全局状态，切换到新桌号 (switchTable 内部已包含反馈)
-            await switchTable(newTableNumber);
-
-            // 2. 更新桌号下拉菜单
+            // 6. 更新桌号下拉菜单
             generateTableSelectors();
             
-            // 3. 提示
-            alert(`已添加 ${newTableNumber} 号桌`);
+            // 7. 提示
+            alert(`已添加 "${newTableIdentifier}" 号桌`);
         }
 
 
@@ -1198,7 +1241,7 @@
             const currentNote = loadTableNote(tableToSettle); 
 
             if (total > 0) {
-                if (confirm(`确定要结算并清空${tableToSettle}号桌账单吗？该订单将被记录在历史中。`)) {
+                if (confirm(`确定要结算并清空"${tableToSettle}"号桌账单吗？该订单将被记录在历史中。`)) {
                     // 1. 下载账单图片 (同步调用)
                     printBillToImage();
 
@@ -1248,7 +1291,7 @@
                     // 切换到下一个桌号并更新 UI
                     switchTable(nextTableToShow); 
                     
-                    alert(`${tableToSettle}号桌结算成功并已回收！`);
+                    alert(`"${tableToSettle}"号桌结算成功并已回收！`);
                 }
             } else {
                 alert('当前账单为空，无需结算。');
@@ -1304,7 +1347,7 @@
                         itemDiv.classList.add('item');
                         itemDiv.setAttribute('data-item-name', item.name);
                         itemDiv.setAttribute('data-table-number', tableNum);
-                        itemDiv.setAttribute('onclick', `changeQuantityFromCard(event, '${item.name}', 1, ${tableNum})`); 
+                        itemDiv.setAttribute('onclick', `changeQuantityFromCard(event, '${item.name}', 1, '${tableNum}')`); 
 
                         itemDiv.innerHTML = `
                             <img src="${item.image || defaultPlaceholder}" alt="${item.name}" class="item-image">
@@ -1313,9 +1356,9 @@
                                 <p>价格: ${item.price.toFixed(0)} Ks</p>
                             </div>
                             <div class="item-controls" onclick="event.stopPropagation();">
-                                <button onclick="changeQuantity('${item.name}', 1, ${tableNum})">+</button>
+                                <button onclick="changeQuantity('${item.name}', 1, '${tableNum}')">+</button>
                                 <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${tableNum}" value="${quantity}" oninput="updateBill()">
-                                <button onclick="changeQuantity('${item.name}', -1, ${tableNum})">-</button>
+                                <button onclick="changeQuantity('${item.name}', -1, '${tableNum}')">-</button>
                             </div>
                         `;
                         content.appendChild(itemDiv);
@@ -1472,7 +1515,9 @@
             activeTables.forEach(i => {
                 const link = document.createElement('a');
                 link.href = '#';
-                link.textContent = `${i}号桌`;
+                // 确保桌号显示正确，如果是数字则显示 "X号桌"，否则显示 "X"
+                const displayNum = (typeof i === 'number' || (!isNaN(parseInt(i)) && String(parseInt(i)) === String(i))) ? `${i}号桌` : String(i);
+                link.textContent = displayNum;
                 link.onclick = (e) => {
                     e.preventDefault();
                     switchTable(i);
@@ -1822,23 +1867,53 @@
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
                     if (key && key.startsWith('bbq_order_table_')) {
-                        const tableNum = parseInt(key.replace('bbq_order_table_', ''));
-                        if (!isNaN(tableNum) && JSON.parse(localStorage.getItem(key)) && Object.keys(JSON.parse(localStorage.getItem(key))).length > 0) {
-                            activeOrderKeys.push(tableNum);
+                        // 移除前缀获取桌号标识
+                        let tableIdentifier = key.replace('bbq_order_table_', '');
+                        
+                        // 尝试将标识符转换回数字 (如果它是纯数字)
+                        const numberCheck = parseInt(tableIdentifier);
+                        if (!isNaN(numberCheck) && String(numberCheck) === tableIdentifier) {
+                            tableIdentifier = numberCheck;
+                        }
+                        
+                        // 检查订单是否有内容
+                        if (JSON.parse(localStorage.getItem(key)) && Object.keys(JSON.parse(localStorage.getItem(key))).length > 0) {
+                            activeOrderKeys.push(tableIdentifier);
                         }
                     }
                 }
                 
                 if (activeOrderKeys.length > 0) {
-                    activeTables = activeOrderKeys.sort((a, b) => a - b);
+                    // 使用与 addNewTable 中相同的排序逻辑
+                    activeTables = activeOrderKeys.sort((a, b) => {
+                        const aIsNum = typeof a === 'number' || (typeof a === 'string' && !isNaN(parseInt(a)));
+                        const bIsNum = typeof b === 'number' || (typeof b === 'string' && !isNaN(parseInt(b)));
+                        
+                        if (aIsNum && bIsNum) {
+                            return (parseInt(a) || Infinity) - (parseInt(b) || Infinity);
+                        } else if (aIsNum) {
+                            return -1;
+                        } else if (bIsNum) {
+                            return 1;
+                        } else {
+                            return String(a).localeCompare(String(b));
+                        }
+                    });
                 } else {
                     activeTables = [1]; // 强制确保 1 号桌始终存在
                 }
 
                 // 2. 确定当前桌号
-                const lastTable = localStorage.getItem('bbq_last_table');
-                if (lastTable && !isNaN(parseInt(lastTable)) && activeTables.includes(parseInt(lastTable))) {
-                    currentTable = parseInt(lastTable);
+                let lastTable = localStorage.getItem('bbq_last_table');
+                
+                // 确保 lastTable 转换成正确的类型（数字或字符串）
+                const numberCheck = parseInt(lastTable);
+                if (!isNaN(numberCheck) && String(numberCheck) === lastTable) {
+                    lastTable = numberCheck;
+                }
+
+                if (lastTable !== null && activeTables.includes(lastTable)) {
+                    currentTable = lastTable;
                 } else {
                     currentTable = activeTables[0] || 1; 
                 }
@@ -1850,7 +1925,7 @@
                 generateTableSelectors(); // 填充下拉菜单
                 updateBill();
                 
-                settleButton.textContent = `结算${currentTable}号桌`;
+                settleButton.textContent = `结算并清空${currentTable}号桌`;
             }
             
             // 绑定 AudioContext 恢复逻辑到用户首次点击
