@@ -279,14 +279,14 @@
             .note-input {
                 padding: 6px 8px; /* 进一步缩小 padding */
                 font-size: 13px;
-                height: 32px; /* 统一更小的高度 */
+                height: 32px; /* 统一高度 */
             }
             
             /* 小屏按钮统一尺寸 */
             .dropbtn {
                 padding: 6px 8px;
                 font-size: 13px;
-                height: 32px; /* 统一更小的高度 */
+                height: 32px; /* 统一高度 */
                 order: 2; 
             }
             #settings-dropbtn {
@@ -319,30 +319,23 @@
                  font-size: 0.9em;
             }
             
-            /* (4) 菜单卡片优化 */
+            /* (4) 菜单列表优化 */
             .item {
-                padding: 8px; /* 减少卡片内边距 */
+                padding: 8px 0; /* 减少卡片内边距 */
+                font-size: 0.9em;
             }
             
-            /* 移除 .item-image 样式 */
-            
+            /* 修正移动端菜品名称字体大小 */
             .item-info h3 {
-                font-size: 0.85em; /* 缩小标题 */
+                /* 根据整体放大后的比例调整，防止在小屏幕上过于拥挤 */
+                font-size: 1.6em; /* 调整列表项字体大小 */
             }
             .item-controls button {
-                width: 18px;
-                height: 18px;
-                font-size: 0.8em;
+                width: 23px; /* 保持按钮尺寸 */
+                height: 23x;
             }
             .item-controls input {
-                width: 20px;
-                font-size: 0.8em;
-            }
-            
-            #menu-area, 
-            .menu-editor-container, 
-            #summary-content { 
-                /* 保持自然适应屏幕宽度 */
+                width: 25px; /* 调整输入框宽度 */
             }
         }
         /* ----------------------- 菜品分类样式 ----------------------- */
@@ -367,10 +360,10 @@
         }
 
         .category-content {
-            padding: 10px;
+            padding: 0 10px; /* 调整 padding 以贴合列表 */
             display: flex; 
-            flex-wrap: wrap; 
-            gap: 15px; 
+            flex-direction: column; /* **修改：列表式布局** */
+            gap: 0; /* 移除列表项之间的间距 */
         }
 
         /* Hide the first top margin to prevent double spacing */
@@ -378,90 +371,82 @@
             margin-top: 0;
         }
 
-        /* ----------------------- 菜品项样式 (正方形卡片) ----------------------- */
+        /* ----------------------- 菜品项样式 (列表行) ----------------------- */
         
         .item {
-            /* 默认两列，减去 gap */
-            flex: 1 1 calc(50% - 7.5px); 
-            max-width: calc(50% - 7.5px);
-
-            /* 内部布局改为垂直，以便图片/信息/数量堆叠，形成方块感 */
-            flex-direction: column; 
-            align-items: center; /* 居中对齐 */
-            text-align: center;
-            
-            padding: 10px; 
-            background-color: rgba(255, 255, 255, 0.6);
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            backdrop-filter: blur(10px);
-            cursor: pointer;
-            box-sizing: border-box; /* 确保 padding 包含在宽度内 */
+            display: flex;
+            justify-content: space-between; /* 左右对齐 */
+            align-items: center; /* 垂直居中 */
+            padding: 10px 0; /* 列表行的垂直内边距 */
+            background-color: transparent; 
+            border-radius: 0;
+            box-shadow: none;
+            transition: background-color 0.2s ease;
+            cursor: default; /* 列表模式不点击整行点单 */
+            width: 100%;
+            box-sizing: border-box;
+            border-bottom: 1px dashed rgba(255, 126, 95, 0.5); /* 列表分隔线 */
         }
-
-        @media (min-width: 768px) {
-            .item {
-                flex: 1 1 calc(33.333% - 10px); /* 桌面端三列 */
-                max-width: calc(33.333% - 10px);
-            }
-        }
-        @media (min-width: 1024px) {
-            .item {
-                flex: 1 1 calc(25% - 11.25px); /* 宽屏四列 */
-                max-width: calc(25% - 11.25px);
-            }
+        
+        /* 移除最后一个列表项的下边框 */
+        .category-content .item:last-child {
+            border-bottom: none; 
         }
 
         .item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            background-color: rgba(255, 126, 95, 0.1);
+            transform: none; /* 移除悬停动画 */
+            box-shadow: none;
         }
         
-        /* 移除 .item-image 样式 */
-
         .item-info {
-            flex-grow: 0;
-            margin-bottom: 10px;
-            pointer-events: none;
+            flex-grow: 1; /* 占据剩余空间 */
+            margin-bottom: 0;
+            padding-right: 15px;
             min-width: 0;
+            cursor: pointer; /* **新增：指针，表示可点击** */
         }
         
+        /* !!! 关键修改: 放大菜品名称字体 !!! */
         .item-info h3 {
-            font-size: 1em;
-            margin: 0;
+            font-size: 2.3em; /* **修改：菜单名称放大 (原 1.4em)** */
+            margin: 0 0 3px 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 100%;
+            font-weight: 600;
         }
 
         .item-info p {
             font-size: 0.9em;
             margin: 0;
+            color: #555;
         }
 
-        /* 数量控制区：改为水平排列，更紧凑 */
+        /* 数量控制区：改为垂直排列 */
         .item-controls {
             display: flex;
-            flex-direction: row; /* 水平排列 */
+            flex-direction: column; /* **修改：垂直上下排列** */
             align-items: center;
-            justify-content: center; /* 确保加减按钮组居中显示 */
+            justify-content: center;
             background-color: rgba(255, 255, 255, 0.8);
             border-radius: 10px;
-            padding: 3px;
+            padding: 5px;
             backdrop-filter: blur(10px);
             pointer-events: auto;
+            min-width: 40px; /* 确保有足够的宽度 */
         }
 
         .item-controls input {
             width: 30px; 
+            height: 25px; /* 调整高度 */
             text-align: center;
-            margin: 0 5px; 
+            margin: 3px 0; /* 垂直间距 */
             border: none;
             background-color: transparent;
-            font-size: 1em;
-            font-weight: 600;
+            font-size: 1.1em;
+            font-weight: 700;
         }
         
         .item-controls button {
@@ -471,9 +456,9 @@
             padding: 0;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 1em;
-            width: 25px; 
-            height: 25px;
+            font-size: 1.2em; /* 按钮字号略微放大 */
+            width: 30px; /* 按钮尺寸 */
+            height: 30px; /* 按钮尺寸 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -482,7 +467,7 @@
 
         .item-controls button:hover {
             background-color: #ff5e3a;
-            transform: scale(1.1);
+            transform: scale(1.05);
         }
 
         /* ----------------------- 账单明细样式 ----------------------- */
@@ -1352,21 +1337,20 @@
                     for (const item of categorizedItems[category]) {
                         const quantity = order[item.name] || 0;
                         
-                        // 菜品项的 HTML 结构 (移除图片元素)
+                        // 菜品项的 HTML 结构 (适配列表和垂直控件)
                         const itemDiv = document.createElement('div');
                         itemDiv.classList.add('item');
                         itemDiv.setAttribute('data-item-name', item.name);
                         itemDiv.setAttribute('data-table-number', tableNum);
-                        itemDiv.setAttribute('onclick', `changeQuantityFromCard(event, '${item.name}', 1, '${tableNum}')`); 
-
+                        // **移除 onclick="changeQuantityFromCard..."**
                         itemDiv.innerHTML = `
-                            <div class="item-info">
+                            <div class="item-info" onclick="changeQuantity('${item.name}', 1, '${tableNum}')">
                                 <h3>${item.name}</h3>
                                 <p>价格: ${item.price.toFixed(0)} Ks</p>
                             </div>
-                            <div class="item-controls" onclick="event.stopPropagation();">
+                            <div class="item-controls">
                                 <button onclick="changeQuantity('${item.name}', 1, '${tableNum}')">+</button>
-                                <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${tableNum}" value="${quantity}" oninput="updateBill()">
+                                <input type="number" class="quantity-input" data-item-name="${item.name}" data-table-number="${tableNum}" value="${quantity}" oninput="updateBill()" onclick="event.stopPropagation()">
                                 <button onclick="changeQuantity('${item.name}', -1, '${tableNum}')">-</button>
                             </div>
                         `;
@@ -1389,6 +1373,7 @@
         
         /**
          * 针对卡片点击的辅助函数，确保点击按钮区域不会重复触发
+         * **注意：此函数在新的列表模式中已不再被调用。**
          */
         function changeQuantityFromCard(event, itemName, change, tableNumber) {
             // 确保点击的不是控件区域 (item-controls)
