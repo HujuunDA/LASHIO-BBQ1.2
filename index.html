@@ -324,11 +324,8 @@
                 padding: 8px; /* 减少卡片内边距 */
             }
             
-            .item-image {
-                width: 60px; /* 进一步缩小图片 */
-                height: 60px;
-                margin-bottom: 5px;
-            }
+            /* 移除 .item-image 样式 */
+            
             .item-info h3 {
                 font-size: 0.85em; /* 缩小标题 */
             }
@@ -342,15 +339,10 @@
                 font-size: 0.8em;
             }
             
-            /* **核心修改：移除强制缩放**
-               现在，菜单项 (`.item` 的 `calc(50% - 7.5px)`) 将自行适应屏幕宽度。
-            */
             #menu-area, 
             .menu-editor-container, 
             #summary-content { 
-                /* 移除 transform: scale(0.8); 和相关的 width/margin 覆盖，
-                   让元素自然适应手机屏幕的宽度。
-                */
+                /* 保持自然适应屏幕宽度 */
             }
         }
         /* ----------------------- 菜品分类样式 ----------------------- */
@@ -426,16 +418,7 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         
-        .item-image {
-            width: 90px; /* 增加尺寸，增强方块感 */
-            height: 90px;
-            object-fit: cover;
-            border-radius: 12px;
-            margin-right: 0; 
-            margin-bottom: 10px;
-            border: 2px solid #ff7e5f;
-            pointer-events: none;
-        }
+        /* 移除 .item-image 样式 */
 
         .item-info {
             flex-grow: 0;
@@ -750,8 +733,7 @@
                 <tr>
                     <th>名称</th>
                     <th>价格</th>
-                    <th>分类</th> <th>图片</th>
-                    <th>操作</th>
+                    <th>分类</th> <th>操作</th>
                 </tr>
             </thead>
             <tbody id="menu-editor-body">
@@ -785,8 +767,7 @@
         
         // --- 全局变量和元素引用 ---
         let menuItems = [];
-        // **修改点 1: 动态桌号管理**
-        let activeTables = []; // 存储当前正在开单的桌号
+        let activeTables = []; 
         let currentTable = 1;
         
         let isEditMode = false;
@@ -814,7 +795,7 @@
         const tableSelectorContainer = document.querySelector('.table-selector-dropdown'); 
         const noteInputContainer = document.querySelector('.note-input-container'); 
 
-        const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMuLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI3MCIgaGVpZ2h0PSI3MCIgcng9IjgiIGZpbGw9IiNGRjNBNTAiLz4KPHBhdGggZD09Ik0zNSAzNUwzNSAyNUwzNSA0NU00NSAzNUwyNSAzNSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cg==";
+        // 移除 defaultPlaceholder
 
         // --- 音频上下文全局管理 ---
         let audioContext;
@@ -871,10 +852,13 @@
         /** * 保存菜单项到数据库 */
         async function saveMenuItemToDB(item) {
             if (!db) await openDB();
+            // **修改点：移除 item.image 的保存，确保只存储基本信息**
+            const itemToSave = { id: item.id, name: item.name, price: item.price, category: item.category };
+            
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction([menuStoreName], 'readwrite');
                 const store = transaction.objectStore(menuStoreName);
-                const request = store.put(item);
+                const request = store.put(itemToSave);
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = (event) => reject(event.target.error);
             });
@@ -894,6 +878,7 @@
 
         /** * 初始化默认菜单项 */
         async function initializeDefaultMenu() {
+            // **修改点：移除 image 字段**
             const defaultMenu = [
                 { name: "羊肉串", price: 2000, category: "肉类" },
                 { name: "牛肉串", price: 2500, category: "肉类" },
@@ -1367,7 +1352,7 @@
                     for (const item of categorizedItems[category]) {
                         const quantity = order[item.name] || 0;
                         
-                        // 菜品项的 HTML 结构
+                        // 菜品项的 HTML 结构 (移除图片元素)
                         const itemDiv = document.createElement('div');
                         itemDiv.classList.add('item');
                         itemDiv.setAttribute('data-item-name', item.name);
@@ -1375,7 +1360,6 @@
                         itemDiv.setAttribute('onclick', `changeQuantityFromCard(event, '${item.name}', 1, '${tableNum}')`); 
 
                         itemDiv.innerHTML = `
-                            <img src="${item.image || defaultPlaceholder}" alt="${item.name}" class="item-image">
                             <div class="item-info">
                                 <h3>${item.name}</h3>
                                 <p>价格: ${item.price.toFixed(0)} Ks</p>
@@ -1551,7 +1535,7 @@
             });
         }
 
-        // --- 菜单编辑和数据管理函数 (未修改) ---
+        // --- 菜单编辑和数据管理函数 (已移除图片功能) ---
 
         /**
          * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB。
@@ -1571,6 +1555,7 @@
                     menuItems[itemIndex].name = nameInputs[i].value.trim();
                     menuItems[itemIndex].price = parseInt(priceInputs[i].value) || 0;
                     menuItems[itemIndex].category = categoryInputs[i].value.trim(); 
+                    // 【移除】不处理图片属性
 
                     dbSavePromises.push(saveMenuItemToDB(menuItems[itemIndex]));
                 }
@@ -1621,16 +1606,14 @@
             const editorBody = document.getElementById('menu-editor-body');
             editorBody.innerHTML = '';
             
+            // 【修改】移除了表格中的 "图片" <th>
             for (const item of menuItems) {
                 const row = document.createElement('tr');
+                // 【修改】移除了图片相关的 <td>
                 row.innerHTML = `
                     <td><input type="text" value="${item.name}" data-id="${item.id}" class="edit-name"></td>
                     <td><input type="number" value="${item.price}" data-id="${item.id}" class="edit-price"></td>
                     <td><input type="text" value="${item.category || ''}" data-id="${item.id}" class="edit-category"></td> 
-                    <td>
-                        <input type="file" accept="image/*" data-id="${item.id}" class="edit-image">
-                        <img src="${item.image || defaultPlaceholder}" style="width:50px;height:50px;" class="preview-img" data-id="${item.id}">
-                    </td>
                     <td>
                         <button onclick="deleteMenuItem(${item.id})" style="background-color: #e74c3c;">删除</button>
                     </td>
@@ -1638,12 +1621,10 @@
                 editorBody.appendChild(row);
             }
 
-            // 添加文件变更监听
-            const fileInputs = document.querySelectorAll('.edit-image');
-            fileInputs.forEach(input => {
-                input.addEventListener('change', handleImageUpload);
-            });
+            // 【移除】文件变更监听和处理函数
         }
+        
+        // 【移除】 function handleImageUpload(event)
 
         /**
          * 保存所有菜单项
@@ -1652,25 +1633,6 @@
             await saveCurrentEditsAndPersist(false);
         }
 
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const id = event.target.getAttribute('data-id');
-                    const preview = document.querySelector(`.preview-img[data-id="${id}"]`);
-                    if (preview) {
-                        preview.src = e.target.result;
-                    }
-                    const itemIndex = menuItems.findIndex(item => item.id == id);
-                    if (itemIndex !== -1) {
-                        menuItems[itemIndex].image = e.target.result;
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-        
         /**
          * 删除菜单项
          */
@@ -1698,6 +1660,7 @@
         async function addNewItem() {
             await saveCurrentEditsAndPersist(true); // 静默保存所有已编辑内容
 
+            // 【修改】newItem 不包含 image 字段
             const newItem = {
                 name: "新菜品",
                 price: 1000,
@@ -1808,7 +1771,7 @@
                 const section = document.createElement('div');
                 section.className = 'daily-summary-section';
                 section.innerHTML = `
-                    <h3>${date}}</h3>
+                    <h3>${date}</h3>
                     <p>订单数量: ${dailyOrders.length}</p>
                     <p class="daily-total">当日总营业额: ${dailyTotal.toFixed(0)} Ks</p>
                     ${ordersHTML}
