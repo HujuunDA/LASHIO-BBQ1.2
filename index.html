@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>烧烤账单计算器10.18.22.37</title>
+    <title>烧烤账单计算器10.19.17.00</title> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -279,14 +279,14 @@
             .note-input {
                 padding: 6px 8px; /* 进一步缩小 padding */
                 font-size: 13px;
-                height: 32px; /* 统一高度 */
+                height: 32px; /* 统一更小的高度 */
             }
             
             /* 小屏按钮统一尺寸 */
             .dropbtn {
                 padding: 6px 8px;
                 font-size: 13px;
-                height: 32px; /* 统一高度 */
+                height: 32px; /* 统一更小的高度 */
                 order: 2; 
             }
             #settings-dropbtn {
@@ -319,7 +319,10 @@
                  font-size: 0.9em;
             }
             
-            /* (4) 菜单列表优化 */
+            /* * 【【【 这是修改点 (1) - 移动端菜单布局 】】】
+             * 替换 1.html 的 (4) 菜单卡片优化 
+             * 采用 2.html 的 (4) 菜单列表优化 
+             */
             .item {
                 padding: 8px 0; /* 减少卡片内边距 */
                 font-size: 0.9em;
@@ -337,6 +340,9 @@
             .item-controls input {
                 width: 25px; /* 调整输入框宽度 */
             }
+            
+            /* * 移除 1.html 中的 核心修改：移除强制缩放 部分
+             */
         }
         /* ----------------------- 菜品分类样式 ----------------------- */
         .category-section {
@@ -359,6 +365,8 @@
             align-items: center;
         }
 
+        /* 【【【 这是修改点 (2) - 菜单内容布局 】】】 */
+        /* 采用 2.html 的列表布局 (column) */
         .category-content {
             padding: 0 10px; /* 调整 padding 以贴合列表 */
             display: flex; 
@@ -371,6 +379,11 @@
             margin-top: 0;
         }
 
+        /* * 【【【 这是修改点 (3) - 菜品项样式 】】】
+         * 整体替换 1.html 的卡片样式 (.item, .item-image, .item-info, .item-controls)
+         * 采用 2.html 的列表行样式
+         */
+        
         /* ----------------------- 菜品项样式 (列表行) ----------------------- */
         
         .item {
@@ -399,6 +412,8 @@
             box-shadow: none;
         }
         
+        /* 移除了 1.html 的 .item-image 样式 */
+
         .item-info {
             flex-grow: 1; /* 占据剩余空间 */
             margin-bottom: 0;
@@ -469,6 +484,8 @@
             background-color: #ff5e3a;
             transform: scale(1.05);
         }
+        /* --- 列表行样式替换结束 --- */
+
 
         /* ----------------------- 账单明细样式 ----------------------- */
         /* 账单明细中的行样式 (性能优化：将item-row用于JS查找) */
@@ -718,7 +735,8 @@
                 <tr>
                     <th>名称</th>
                     <th>价格</th>
-                    <th>分类</th> <th>操作</th>
+                    <th>分类</th> <th>图片</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody id="menu-editor-body">
@@ -730,10 +748,46 @@
     </div>
 
     <div id="summary-content" style="display: none;">
-        <h2>每日开单汇总</h2>
-        <div id="summary-container">
+        <h2>资金汇总管理</h2>
+        
+        <div id="summary-nav" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
+            <button onclick="showSummaryView('profit-loss')" style="padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; background-color: #f39c12; color: white; font-weight: bold; opacity: 1.0;">损益汇总</button>
+            <button onclick="showSummaryView('income')" style="padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; background-color: #27ae60; color: white; font-weight: bold; opacity: 0.7;">收入管理</button>
+            <button onclick="showSummaryView('expense')" style="padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; background-color: #e74c3c; color: white; font-weight: bold; opacity: 0.7;">支出管理</button>
+        </div>
+
+        <div id="profit-loss-view" style="display: block;">
+            <h3 style="color: #f39c12; border-bottom: 1px solid #ffc3a0; padding-bottom: 10px;">每日/每月损益汇总</h3>
+            <div id="summary-container"></div>
+            <div id="grand-total">总损益: 0 Ks</div>
+        </div>
+        
+        <div id="income-view" style="display: none;">
+            <h3 style="color: #27ae60; border-bottom: 1px solid #ffc3a0; padding-bottom: 10px;">添加新的其他收入</h3>
+            <div style="margin-bottom: 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <input type="date" id="income-date" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="text" id="income-description" placeholder="收入描述" style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" id="income-amount" placeholder="金额 (Ks)" style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <button onclick="addIncome()" style="background-color: #27ae60; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">记录收入</button>
             </div>
-        <div id="grand-total">总营业额: 0 Ks</div>
+            <h3 style="color: #27ae60; border-bottom: 1px dashed #ffc3a0; padding-bottom: 10px;">历史收入记录 (含销售订单)</h3>
+            <div id="income-list" style="margin-top: 20px;"></div>
+        </div>
+        
+        <div id="expense-view" style="display: none;">
+            <h3 style="color: #e74c3c; border-bottom: 1px solid #ffc3a0; padding-bottom: 10px;">添加新的支出</h3>
+            
+            <div id="expense-entry-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                </div>
+            
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                 <button id="add-expense-row-btn" onclick="addNewExpenseRow()" style="background-color: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">添加一行</button>
+                 <button onclick="addExpense()" style="background-color: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">记录所有支出</button>
+            </div>
+            
+            <h3 style="color: #e74c3c; border-bottom: 1px dashed #ffc3a0; padding-bottom: 10px;">历史支出记录</h3>
+            <div id="expense-list" style="margin-top: 20px;"></div>
+        </div>
         <div class="summary-action-buttons">
             <button class="export" onclick="exportToExcel()">导出历史账单</button>
             <button onclick="clearAllHistory()">清空所有历史账单</button>
@@ -744,6 +798,9 @@
     <div id="print-area"></div>
 
     <script>
+        // --- 所有的 JS 逻辑将完全保留 1.html 的 ---
+        // --- (除了 renderAllMenus 函数中的 HTML 结构) ---
+
         // --- IndexedDB 数据存储配置 ---
         const dbName = 'bbq_pos_db';
         const dbVersion = 1;
@@ -752,7 +809,8 @@
         
         // --- 全局变量和元素引用 ---
         let menuItems = [];
-        let activeTables = []; 
+        // **修改点 1: 动态桌号管理**
+        let activeTables = []; // 存储当前正在开单的桌号
         let currentTable = 1;
         
         let isEditMode = false;
@@ -780,7 +838,8 @@
         const tableSelectorContainer = document.querySelector('.table-selector-dropdown'); 
         const noteInputContainer = document.querySelector('.note-input-container'); 
 
-        // 移除 defaultPlaceholder
+        // defaultPlaceholder 保持 1.html 的不变 (用于菜单编辑)
+        const defaultPlaceholder = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMuLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI3MCIgaGVpZ2h0PSI3MCIgcng9IjgiIGZpbGw9IiNGRjNBNTAiLz4KPHBhdGggZD09Ik0zNSAzNUwzNSAyNUwzNSA0NU00NSAzNUwyNSAzNSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cg==";
 
         // --- 音频上下文全局管理 ---
         let audioContext;
@@ -796,7 +855,7 @@
             }
         }
 
-        // --- IndexedDB 数据库操作函数 (未修改) ---
+        // --- IndexedDB 数据库操作函数 (保留 1.html 的) ---
 
         /** * 打开或创建 IndexedDB 数据库 */
         function openDB() {
@@ -834,16 +893,13 @@
             });
         }
 
-        /** * 保存菜单项到数据库 */
+        /** * 保存菜单项到数据库 (保留 1.html 的，含 image) */
         async function saveMenuItemToDB(item) {
             if (!db) await openDB();
-            // **修改点：移除 item.image 的保存，确保只存储基本信息**
-            const itemToSave = { id: item.id, name: item.name, price: item.price, category: item.category };
-            
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction([menuStoreName], 'readwrite');
                 const store = transaction.objectStore(menuStoreName);
-                const request = store.put(itemToSave);
+                const request = store.put(item);
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = (event) => reject(event.target.error);
             });
@@ -861,9 +917,8 @@
             });
         }
 
-        /** * 初始化默认菜单项 */
+        /** * 初始化默认菜单项 (保留 1.html 的) */
         async function initializeDefaultMenu() {
-            // **修改点：移除 image 字段**
             const defaultMenu = [
                 { name: "羊肉串", price: 2000, category: "肉类" },
                 { name: "牛肉串", price: 2500, category: "肉类" },
@@ -908,7 +963,7 @@
             }
         }
 
-        // --- 辅助工具函数 (未修改) ---
+        // --- 辅助工具函数 (保留 1.html 的) ---
 
         /**
          * 播放音效（用于点单反馈） 
@@ -1003,7 +1058,7 @@
             return localStorage.getItem(`bbq_note_table_${tableNumber}`) || '';
         }
 
-        // --- 核心点单逻辑函数 ---
+        // --- 核心点单逻辑函数 (保留 1.html 的) ---
         
         /** * 切换当前操作的桌号 */
         async function switchTable(tableNumber) {
@@ -1039,8 +1094,8 @@
             currentTable = tableNumber;
             localStorage.setItem('bbq_last_table', currentTable);
 
-            tableSelectorDropbtn.textContent = `${currentTable}号桌`;
-            settleButton.textContent = `结算并清空${tableNumber}号桌`;
+            tableSelectorDropbtn.textContent = (typeof tableNumber === 'number' || (!isNaN(parseInt(tableNumber)) && String(parseInt(tableNumber)) === String(tableNumber))) ? `${tableNumber}号桌` : String(tableNumber);
+            settleButton.textContent = `结算并清空${tableSelectorDropbtn.textContent}`;
             
             // 加载备注信息到输入框
             orderNoteInput.value = loadTableNote(currentTable); 
@@ -1142,6 +1197,7 @@
          * 将账单内容转换为图片并下载 (此功能本身性能开销大，但在结算时只发生一次)
          */
         function printBillToImage() {
+            const tableDisplay = (typeof currentTable === 'number' || (!isNaN(parseInt(currentTable)) && String(parseInt(currentTable)) === String(currentTable))) ? `${currentTable}号桌` : String(currentTable);
             const currentOrder = loadCurrentOrder(currentTable);
             const total = calculateTotal(currentOrder);
             const currentNote = loadTableNote(currentTable); 
@@ -1155,7 +1211,7 @@
                 <div class="print-info">
                     <p>日期: ${getTodayDateString()}</p>
                     <p>时间: ${timeString}</p>
-                    <p>桌号: ${currentTable}号桌</p>
+                    <p>桌号: ${tableDisplay}</p>
                     ${currentNote ? `<p>备注: ${currentNote}</p>` : ''} 
                 </div>
                 <hr>
@@ -1202,7 +1258,7 @@
                 
                 const a = document.createElement('a');
                 a.href = imgUrl;
-                a.download = `账单-${currentTable}号桌-${getTodayDateString()}-${now.getTime()}.png`;
+                a.download = `账单-${currentTable}-${getTodayDateString()}-${now.getTime()}.png`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1234,9 +1290,11 @@
             const currentOrder = loadCurrentOrder(tableToSettle);
             const total = calculateTotal(currentOrder);
             const currentNote = loadTableNote(tableToSettle); 
+            const tableDisplay = (typeof tableToSettle === 'number' || (!isNaN(parseInt(tableToSettle)) && String(parseInt(tableToSettle)) === String(tableToSettle))) ? `${tableToSettle}号桌` : String(tableToSettle);
+
 
             if (total > 0) {
-                if (confirm(`确定要结算并清空"${tableToSettle}"号桌账单吗？该订单将被记录在历史中。`)) {
+                if (confirm(`确定要结算并清空"${tableDisplay}"账单吗？该订单将被记录在历史中。`)) {
                     // 1. 下载账单图片 (同步调用)
                     printBillToImage();
 
@@ -1286,7 +1344,7 @@
                     // 切换到下一个桌号并更新 UI
                     switchTable(nextTableToShow); 
                     
-                    alert(`"${tableToSettle}"号桌结算成功并已回收！`);
+                    alert(`"${tableDisplay}"结算成功并已回收！`);
                 }
             } else {
                 alert('当前账单为空，无需结算。');
@@ -1337,12 +1395,16 @@
                     for (const item of categorizedItems[category]) {
                         const quantity = order[item.name] || 0;
                         
-                        // 菜品项的 HTML 结构 (适配列表和垂直控件)
+                        // 
+                        // 【【【 这是修改点 (4) - JS 渲染 HTML 结构 】】】
+                        //
                         const itemDiv = document.createElement('div');
                         itemDiv.classList.add('item');
                         itemDiv.setAttribute('data-item-name', item.name);
                         itemDiv.setAttribute('data-table-number', tableNum);
-                        // **移除 onclick="changeQuantityFromCard..."**
+                        // 移除了 1.html 的 itemDiv.setAttribute('onclick', ...)
+
+                        // 采用了 2.html 的 HTML 结构 (无 <img>, onclick 在 item-info 上, input 上有 stopPropagation)
                         itemDiv.innerHTML = `
                             <div class="item-info" onclick="changeQuantity('${item.name}', 1, '${tableNum}')">
                                 <h3>${item.name}</h3>
@@ -1372,8 +1434,8 @@
         }
         
         /**
-         * 针对卡片点击的辅助函数，确保点击按钮区域不会重复触发
-         * **注意：此函数在新的列表模式中已不再被调用。**
+         * 针对卡片点击的辅助函数
+         * (此函数在新的列表布局中不再被调用，但保留它不会影响功能)
          */
         function changeQuantityFromCard(event, itemName, change, tableNumber) {
             // 确保点击的不是控件区域 (item-controls)
@@ -1520,7 +1582,7 @@
             });
         }
 
-        // --- 菜单编辑和数据管理函数 (已移除图片功能) ---
+        // --- 菜单编辑和数据管理函数 (保留 1.html 的，含图片) ---
 
         /**
          * 读取当前编辑区域的所有输入框值，更新到 menuItems 数组，并保存到 IndexedDB。
@@ -1540,7 +1602,6 @@
                     menuItems[itemIndex].name = nameInputs[i].value.trim();
                     menuItems[itemIndex].price = parseInt(priceInputs[i].value) || 0;
                     menuItems[itemIndex].category = categoryInputs[i].value.trim(); 
-                    // 【移除】不处理图片属性
 
                     dbSavePromises.push(saveMenuItemToDB(menuItems[itemIndex]));
                 }
@@ -1562,6 +1623,7 @@
                 await saveCurrentEditsAndPersist(false); 
                 mainContent.style.display = 'flex';
                 editContent.style.display = 'none';
+                summaryContent.style.display = 'none';
                 editLink.textContent = '编辑菜单';
                 
                 // 【新增】显示控制项
@@ -1591,14 +1653,16 @@
             const editorBody = document.getElementById('menu-editor-body');
             editorBody.innerHTML = '';
             
-            // 【修改】移除了表格中的 "图片" <th>
             for (const item of menuItems) {
                 const row = document.createElement('tr');
-                // 【修改】移除了图片相关的 <td>
                 row.innerHTML = `
                     <td><input type="text" value="${item.name}" data-id="${item.id}" class="edit-name"></td>
                     <td><input type="number" value="${item.price}" data-id="${item.id}" class="edit-price"></td>
                     <td><input type="text" value="${item.category || ''}" data-id="${item.id}" class="edit-category"></td> 
+                    <td>
+                        <input type="file" accept="image/*" data-id="${item.id}" class="edit-image">
+                        <img src="${item.image || defaultPlaceholder}" style="width:50px;height:50px;" class="preview-img" data-id="${item.id}">
+                    </td>
                     <td>
                         <button onclick="deleteMenuItem(${item.id})" style="background-color: #e74c3c;">删除</button>
                     </td>
@@ -1606,10 +1670,12 @@
                 editorBody.appendChild(row);
             }
 
-            // 【移除】文件变更监听和处理函数
+            // 添加文件变更监听
+            const fileInputs = document.querySelectorAll('.edit-image');
+            fileInputs.forEach(input => {
+                input.addEventListener('change', handleImageUpload);
+            });
         }
-        
-        // 【移除】 function handleImageUpload(event)
 
         /**
          * 保存所有菜单项
@@ -1618,6 +1684,25 @@
             await saveCurrentEditsAndPersist(false);
         }
 
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const id = event.target.getAttribute('data-id');
+                    const preview = document.querySelector(`.preview-img[data-id="${id}"]`);
+                    if (preview) {
+                        preview.src = e.target.result;
+                    }
+                    const itemIndex = menuItems.findIndex(item => item.id == id);
+                    if (itemIndex !== -1) {
+                        menuItems[itemIndex].image = e.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
         /**
          * 删除菜单项
          */
@@ -1645,7 +1730,6 @@
         async function addNewItem() {
             await saveCurrentEditsAndPersist(true); // 静默保存所有已编辑内容
 
-            // 【修改】newItem 不包含 image 字段
             const newItem = {
                 name: "新菜品",
                 price: 1000,
@@ -1663,7 +1747,116 @@
             await renderMenuEditor();
         }
         
-        // --- 汇总模式函数 (未修改) ---
+        // --- 汇总模式函数 (保留 1.html 的，含财务管理) ---
+        
+        // --- 新增: 资金汇总管理视图切换与数据操作 ---
+        let currentSummaryView = 'profit-loss';
+        
+        /** * 新增功能: 获取每日财务数据 (销售、收入、支出)
+         */
+        function getDailyFinancialData() {
+            const dailyData = {};
+            let grandTotalSales = 0;
+            let grandTotalIncome = 0;
+            let grandTotalExpense = 0;
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                // 使用正则表达式从键中提取日期 YYYY-MM-DD
+                const date = key.match(/_(\d{4}-\d{2}-\d{2})$/)?.[1];
+                if (!date) continue;
+
+                if (!dailyData[date]) {
+                    // 初始化每日数据结构
+                    dailyData[date] = { sales: 0, income: 0, expense: 0, orders: [], incomes: [], expenses: [] };
+                }
+
+                const records = JSON.parse(localStorage.getItem(key));
+
+                if (key.startsWith('bbq_orders_by_date_')) {
+                    // 销售额 = 所有订单的总和
+                    let dailySales = records.reduce((sum, order) => sum + order.total, 0);
+                    dailyData[date].sales += dailySales;
+                    dailyData[date].orders.push(...records);
+                    grandTotalSales += dailySales;
+                } else if (key.startsWith('bbq_incomes_by_date_')) {
+                    // 其他收入 = 所有手动记录收入的总和
+                    let dailyIncomes = records.reduce((sum, income) => sum + income.amount, 0);
+                    dailyData[date].income += dailyIncomes;
+                    dailyData[date].incomes.push(...records);
+                    grandTotalIncome += dailyIncomes;
+                } else if (key.startsWith('bbq_expenses_by_date_')) {
+                    // 支出 = 所有手动记录支出的总和
+                    let dailyExpenses = records.reduce((sum, expense) => sum + expense.amount, 0);
+                    dailyData[date].expense += dailyExpenses;
+                    dailyData[date].expenses.push(...records);
+                    grandTotalExpense += dailyExpenses;
+                }
+            }
+            
+            // 转换为数组并按日期降序排序
+            const sortedDates = Object.keys(dailyData).sort().reverse();
+            
+            // 计算每日净损益
+            const result = sortedDates.map(date => {
+                const data = dailyData[date];
+                // 净损益 = 销售额 + 其他收入 - 支出
+                const net = data.sales + data.income - data.expense;
+                data.net = net;
+                data.date = date;
+                return data;
+            });
+
+            return {
+                dailyRecords: result,
+                grandTotals: { sales: grandTotalSales, income: grandTotalIncome, expense: grandTotalExpense }
+            };
+        }
+
+
+        /** * 切换汇总模式下的子视图 (已修改) */
+        function showSummaryView(view) {
+            // 隐藏所有视图
+            document.getElementById('profit-loss-view').style.display = 'none'; 
+            document.getElementById('income-view').style.display = 'none';
+            document.getElementById('expense-view').style.display = 'none';
+            
+            // 重置按钮透明度
+            const buttons = document.querySelectorAll('#summary-nav button');
+            buttons.forEach(btn => btn.style.opacity = '0.7');
+
+            currentSummaryView = view;
+            
+            if (view === 'profit-loss') { // 损益汇总
+                document.getElementById('profit-loss-view').style.display = 'block';
+                buttons[0].style.opacity = '1.0';
+                renderProfitLoss(); 
+            } else if (view === 'income') { // 收入管理 (含销售)
+                document.getElementById('income-view').style.display = 'block';
+                buttons[1].style.opacity = '1.0';
+                document.getElementById('income-date').value = getTodayDateString();
+                renderIncomes(); 
+            } else if (view === 'expense') { // 支出管理
+                document.getElementById('expense-view').style.display = 'block';
+                buttons[2].style.opacity = '1.0';
+                
+                // --- 修改: 重置支出表单为单个空行 ---
+                const container = document.getElementById('expense-entry-container');
+                container.innerHTML = `
+                    <div class="expense-entry-row" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <input type="date" class="expense-date-input" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;"> 
+                        <input type="text" class="expense-description-input" placeholder="支出描述" style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <input type="number" class="expense-amount-input" placeholder="金额 (Ks)" style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button onclick="removeExpenseRow(this)" style="background-color: #95a5a6; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">删除</button>
+                    </div>
+                `;
+                // 为该行设置默认日期
+                container.querySelector('.expense-date-input').value = getTodayDateString();
+                // --- 修改结束 ---
+                
+                renderExpenses();
+            }
+        }
 
         /**
          * 切换到历史汇总模式
@@ -1681,7 +1874,8 @@
                 tableSelectorContainer.style.display = 'none';
                 noteInputContainer.style.display = 'none';
 
-                renderSummary();
+                // 默认显示损益汇总
+                showSummaryView('profit-loss'); 
             } else {
                 mainContent.style.display = 'flex';
                 summaryContent.style.display = 'none';
@@ -1694,137 +1888,469 @@
         }
         
         /**
-         * 渲染汇总数据
+         * 渲染损益汇总数据 (新功能)
          */
-        function renderSummary() {
+        function renderProfitLoss() {
             const summaryContainer = document.getElementById('summary-container');
             summaryContainer.innerHTML = '';
             
-            let grandTotal = 0;
+            const { dailyRecords } = getDailyFinancialData();
             
-            const keys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('bbq_orders_by_date_')) {
-                    keys.push(key);
-                }
-            }
-            
-            keys.sort().reverse();
-            
-            if (keys.length === 0) {
-                summaryContainer.innerHTML = '<p>暂无历史订单数据</p>';
-                document.getElementById('grand-total').textContent = '总营业额: 0 Ks';
+            if (dailyRecords.length === 0) {
+                summaryContainer.innerHTML = '<p>暂无任何资金记录</p>';
+                document.getElementById('grand-total').textContent = '总损益: 0 Ks';
                 return;
             }
             
-            for (const key of keys) {
-                const date = key.replace('bbq_orders_by_date_', '');
-                const dailyOrders = JSON.parse(localStorage.getItem(key));
-                
-                let dailyTotal = 0;
-                let ordersHTML = '';
-                
-                for (const order of dailyOrders) {
-                    dailyTotal += order.total;
-                    const timestamp = new Date(order.timestamp);
-                    const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}`;
-                    
-                    let itemsHTML = '';
-                    for (const itemName in order.order) {
-                        const quantity = order.order[itemName];
-                        const item = menuItems.find(i => i.name === itemName) || { price: 0 };
-                        const subtotal = item.price * quantity;
-                        itemsHTML += `<li>${itemName} x ${quantity} = ${subtotal.toFixed(0)} Ks</li>`;
-                    }
-                    
-                    const noteDisplay = order.note ? `<p>备注: ${order.note}</p>` : '';
+            let grandTotalNet = 0;
+            let monthlyTotals = {}; // { 'YYYY-MM': totalNet }
+            let dailySummaryHTML = '';
 
-                    ordersHTML += `
-                        <div class="order-details">
-                            <p>桌号: ${order.table}号桌</p>
-                            <p>时间: ${timeString}</p>
-                            ${noteDisplay} 
-                            <ul class="order-items">${itemsHTML}</ul>
-                            <p>小计: ${order.total.toFixed(0)} Ks</p>
-                        </div>
-                    `;
+            for (const day of dailyRecords) {
+                grandTotalNet += day.net;
+                const month = day.date.substring(0, 7);
+                if (!monthlyTotals[month]) {
+                    monthlyTotals[month] = 0;
                 }
-                
-                grandTotal += dailyTotal;
-                
-                const section = document.createElement('div');
-                section.className = 'daily-summary-section';
-                section.innerHTML = `
-                    <h3>${date}</h3>
-                    <p>订单数量: ${dailyOrders.length}</p>
-                    <p class="daily-total">当日总营业额: ${dailyTotal.toFixed(0)} Ks</p>
-                    ${ordersHTML}
+                monthlyTotals[month] += day.net;
+
+                // Daily Section Display
+                const netColor = day.net >= 0 ? '#27ae60' : '#e74c3c';
+                const netText = day.net >= 0 ? '盈利' : '亏损';
+
+                dailySummaryHTML += `
+                    <div class="daily-summary-section">
+                        <h3>${day.date}</h3>
+                        <p style="color: #f39c12; font-weight: 500;">当日销售额: ${day.sales.toFixed(0)} Ks</p>
+                        <p style="color: #27ae60; font-weight: 500;">当日其他收入: ${day.income.toFixed(0)} Ks</p>
+                        <p style="color: #e74c3c; font-weight: 500;">当日支出: ${day.expense.toFixed(0)} Ks</p>
+                        <p class="daily-total" style="font-size: 1.2em; color: ${netColor};">
+                            当日净${netText}: ${day.net.toFixed(0)} Ks
+                        </p>
+                    </div>
                 `;
+            }
+
+            // Monthly Summary Display
+            let monthlySummaryHTML = '<h3 style="margin-top: 0; color: #3498db; border-bottom: 1px solid #3498db; padding-bottom: 10px;">每月损益汇总</h3>';
+            
+            const sortedMonths = Object.keys(monthlyTotals).sort().reverse();
+            for(const month of sortedMonths) {
+                const monthNet = monthlyTotals[month];
+                const monthColor = monthNet >= 0 ? '#27ae60' : '#e74c3c';
+                const monthText = monthNet >= 0 ? '盈利' : '亏损';
                 
-                summaryContainer.appendChild(section);
+                monthlySummaryHTML += `
+                    <div style="padding: 10px 0; border-bottom: 1px dashed #ddd;">
+                        <p style="font-size: 1.1em; font-weight: bold; color: #555;">${month}</p>
+                        <p style="font-size: 1.2em; font-weight: bold; text-align: right; color: ${monthColor};">
+                            本月净${monthText}: ${monthNet.toFixed(0)} Ks
+                        </p>
+                    </div>
+                `;
             }
             
-            document.getElementById('grand-total').textContent = `总营业额: ${grandTotal.toFixed(0)} Ks`;
+            // 合并显示: 先月汇总，后日明细
+            summaryContainer.innerHTML = monthlySummaryHTML + dailySummaryHTML;
+
+
+            // 更新总损益
+            const grandNetColor = grandTotalNet >= 0 ? '#27ae60' : '#e74c3c';
+            const grandNetText = grandTotalNet >= 0 ? '盈利' : '亏损';
+            document.getElementById('grand-total').innerHTML = `累计总${grandNetText}: <span style="color: ${grandNetColor}">${grandTotalNet.toFixed(0)} Ks</span>`;
         }
         
+        // --- 收入管理函数 (已修改，整合销售订单) ---
+        function addIncome() {
+            const description = document.getElementById('income-description').value.trim();
+            const amount = parseInt(document.getElementById('income-amount').value);
+            const date = document.getElementById('income-date').value;
+
+            if (!description || isNaN(amount) || amount <= 0 || !date) {
+                alert('请输入有效的描述、金额和日期。');
+                return;
+            }
+            
+            const historyKey = `bbq_incomes_by_date_${date}`;
+            let dailyIncomes = JSON.parse(localStorage.getItem(historyKey)) || [];
+
+            dailyIncomes.push({
+                id: Date.now(),
+                description: description,
+                amount: amount,
+                timestamp: new Date().toISOString(),
+                date: date
+            });
+
+            localStorage.setItem(historyKey, JSON.stringify(dailyIncomes));
+            
+            document.getElementById('income-description').value = '';
+            document.getElementById('income-amount').value = '';
+            
+            alert(`已添加其他收入: ${description} (${amount.toFixed(0)} Ks) on ${date}`);
+            renderIncomes();
+        }
+
         /**
-         * 导出到Excel
+         * 渲染收入记录 (包含其他收入和销售订单详情)
+         */
+        function renderIncomes() {
+            const incomeList = document.getElementById('income-list');
+            incomeList.innerHTML = '';
+            
+            const { dailyRecords } = getDailyFinancialData();
+            let grandTotalIncomePlusSales = 0;
+
+            if (dailyRecords.length === 0) {
+                incomeList.innerHTML = '<p>暂无任何收入记录</p>';
+                return;
+            }
+
+            for (const day of dailyRecords) {
+                // Sort sales orders by timestamp
+                const sortedOrders = day.orders.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                // Sort other incomes by timestamp
+                const sortedIncomes = day.incomes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                // Combine all income types for the day
+                const allIncomes = [
+                    ...sortedOrders.map(o => ({
+                        id: new Date(o.timestamp).getTime(), // Use timestamp for pseudo-ID
+                        type: '销售订单',
+                        description: `桌号: ${o.table}`,
+                        amount: o.total,
+                        timestamp: o.timestamp,
+                        details: o.order, 
+                        note: o.note,
+                        date: day.date
+                    })),
+                    ...sortedIncomes.map(i => ({
+                        id: i.id,
+                        type: '其他收入',
+                        description: i.description,
+                        amount: i.amount,
+                        timestamp: i.timestamp,
+                        date: i.date 
+                    }))
+                ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Sort by time
+
+                if (allIncomes.length === 0) continue;
+
+                let dailyTotal = day.sales + day.income;
+                grandTotalIncomePlusSales += dailyTotal;
+                
+                let listHTML = `
+                    <div style="background-color: rgba(39, 174, 96, 0.1); padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                        <p style="font-weight: bold; font-size: 1.2em; color: #27ae60; border-bottom: 1px solid #27ae60; padding-bottom: 5px;">日期: ${day.date}</p>
+                        <ul style="list-style-type: none; padding: 0;">
+                `;
+                
+                for (const record of allIncomes) {
+                    const timeString = new Date(record.timestamp).toLocaleTimeString();
+                    const isOrder = record.type === '销售订单';
+                    // 销售订单不能单独删除，只能通过清空全部历史
+                    const deleteAction = isOrder ? 'alert(\'销售订单不可单独删除，请清空所有历史账单\')' : `deleteRecord('bbq_incomes_by_date_${record.date}', ${record.id}, 'income')`;
+                    const color = isOrder ? '#f39c12' : '#27ae60';
+                    
+                    let itemDetailsHTML = '';
+                    if (isOrder && record.details) {
+                        itemDetailsHTML = '<ul style="padding-left: 20px; font-size: 0.9em; color: #555; margin-top: 5px;">';
+                        for (const item in record.details) {
+                            const qty = record.details[item];
+                            const itemData = menuItems.find(i => i.name === item) || { price: 0 };
+                            itemDetailsHTML += `<li>${item} x ${qty} (${(itemData.price * qty).toFixed(0)} Ks)</li>`;
+                        }
+                        itemDetailsHTML += `</ul>`;
+                        if(record.note) itemDetailsHTML += `<p style="padding-left: 20px; font-style: italic; color: #777; margin-top: 0;">备注: ${record.note}</p>`;
+                    }
+
+
+                    listHTML += `<li style="padding: 8px 0; border-bottom: 1px dotted #ccc;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <span style="font-weight: ${isOrder ? 'bold' : 'normal'}; color: ${color};">${record.type} - ${record.description} (${timeString})</span>
+                                        <span style="min-width: 100px; text-align: right; font-weight: bold; color: ${color};">${record.amount.toFixed(0)} Ks 
+                                            <button style="margin-left: 10px; background-color: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 5px; cursor: pointer;" 
+                                                    onclick="${deleteAction}">删除</button>
+                                        </span>
+                                    </div>
+                                    ${itemDetailsHTML}
+                                </li>`;
+                }
+                
+                listHTML += `</ul><p class="daily-total" style="font-weight: bold; text-align: right; color: #27ae60; border-top: 1px solid #ddd; padding-top: 5px; margin-top: 10px;">当日总收入: ${dailyTotal.toFixed(0)} Ks</p></div>`;
+                
+                incomeList.innerHTML += listHTML;
+            }
+            
+            incomeList.innerHTML = `<h3 style="color: #27ae60; text-align: center; margin-bottom: 15px;">累计总收入 (含销售): ${grandTotalIncomePlusSales.toFixed(0)} Ks</h3>` + incomeList.innerHTML;
+
+            document.getElementById('income-date').value = getTodayDateString();
+        }
+
+
+        // --- 支出管理函数 (包含日期) ---
+        
+        /**
+         * 已重写: 记录所有在表单中输入的支出行
+         */
+        function addExpense() {
+            const rows = document.querySelectorAll('#expense-entry-container .expense-entry-row');
+            let addedCount = 0;
+            let totalAmount = 0;
+            let errors = 0;
+
+            // 使用 Map 批量按日期保存
+            const savesByDate = new Map();
+
+            rows.forEach((row, index) => {
+                const dateInput = row.querySelector('.expense-date-input');
+                const descriptionInput = row.querySelector('.expense-description-input');
+                const amountInput = row.querySelector('.expense-amount-input');
+                
+                const date = dateInput.value;
+                const description = descriptionInput.value.trim();
+                const amount = parseInt(amountInput.value);
+
+                if (!description || isNaN(amount) || amount <= 0 || !date) {
+                    errors++;
+                    return; // 跳过此行
+                }
+                
+                // 准备要保存的数据
+                const expenseRecord = {
+                    id: Date.now() + index, // 使用 index 确保 ID 唯一性
+                    description: description,
+                    amount: amount,
+                    timestamp: new Date().toISOString(),
+                    date: date
+                };
+                
+                if (!savesByDate.has(date)) {
+                    savesByDate.set(date, []);
+                }
+                savesByDate.get(date).push(expenseRecord);
+
+                addedCount++;
+                totalAmount += amount;
+            });
+
+            // 执行所有保存操作
+            savesByDate.forEach((records, date) => {
+                const historyKey = `bbq_expenses_by_date_${date}`;
+                // 获取已有记录或创建新数组
+                let dailyExpenses = JSON.parse(localStorage.getItem(historyKey)) || [];
+                // 添加当天所有的
+                dailyExpenses.push(...records);
+                // 保存
+                localStorage.setItem(historyKey, JSON.stringify(dailyExpenses));
+            });
+
+            if (addedCount > 0) {
+                alert(`成功添加 ${addedCount} 条支出记录，总金额: ${totalAmount.toFixed(0)} Ks。`);
+                if (errors > 0) {
+                    alert(`有 ${errors} 条无效记录被跳过。`);
+                }
+                // 重置表单: 移除除第一行外的所有行，并清空第一行
+                const container = document.getElementById('expense-entry-container');
+                const allRows = container.querySelectorAll('.expense-entry-row');
+                for (let i = allRows.length - 1; i > 0; i--) {
+                    allRows[i].remove();
+                }
+                // 清理并重置第一行
+                const firstRow = allRows[0];
+                if (firstRow) {
+                    firstRow.querySelector('.expense-date-input').value = getTodayDateString();
+                    firstRow.querySelector('.expense-description-input').value = '';
+                    firstRow.querySelector('.expense-amount-input').value = '';
+                }
+                renderExpenses(); // 更新历史列表
+            } else if (errors > 0) {
+                 alert(`所有 ${errors} 条记录都无效，请输入有效信息。`);
+            } else {
+                alert('请输入有效的支出信息。');
+            }
+        }
+
+        /**
+         * 新增: 添加一个新的支出输入行
+         */
+        function addNewExpenseRow() {
+            const container = document.getElementById('expense-entry-container');
+            const newRow = document.createElement('div');
+            newRow.className = 'expense-entry-row';
+            newRow.style.cssText = 'display: flex; align-items: center; flex-wrap: wrap; gap: 10px;';
+            
+            newRow.innerHTML = `
+                <input type="date" class="expense-date-input" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;"> 
+                <input type="text" class="expense-description-input" placeholder="支出描述" style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <input type="number" class="expense-amount-input" placeholder="金额 (Ks)" style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <button onclick="removeExpenseRow(this)" style="background-color: #95a5a6; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">删除</button>
+            `;
+            
+            // 为新行设置默认日期
+            newRow.querySelector('.expense-date-input').value = getTodayDateString();
+            container.appendChild(newRow);
+        }
+
+        /**
+         * 新增: 删除一个支出输入行
+         */
+        function removeExpenseRow(buttonElement) {
+            const container = document.getElementById('expense-entry-container');
+            if (container.children.length > 1) {
+                buttonElement.parentElement.remove();
+            } else {
+                alert('不能删除最后一行。');
+            }
+        }
+
+
+        function renderExpenses() {
+            const expenseList = document.getElementById('expense-list');
+            expenseList.innerHTML = '';
+            
+            const { dailyRecords } = getDailyFinancialData();
+            let grandTotalExpense = 0;
+            
+            if (dailyRecords.length === 0) {
+                expenseList.innerHTML = '<p>暂无支出记录</p>';
+                return;
+            }
+
+            for (const day of dailyRecords) {
+                const dailyExpenses = day.expenses.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                if (dailyExpenses.length === 0) continue;
+
+                let dailyTotal = day.expense;
+                grandTotalExpense += dailyTotal;
+                
+                let listHTML = `
+                    <div style="background-color: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+                        <p style="font-weight: bold; font-size: 1.2em; color: #e74c3c; border-bottom: 1px solid #e74c3c; padding-bottom: 5px;">日期: ${day.date}</p>
+                        <ul style="list-style-type: none; padding: 0;">
+                `;
+                
+                for (const expense of dailyExpenses) {
+                    const timeString = new Date(expense.timestamp).toLocaleTimeString();
+                    listHTML += `<li style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #eee;">
+                                    <span>${expense.description} (${timeString})</span>
+                                    <span>${expense.amount.toFixed(0)} Ks 
+                                        <button style="margin-left: 10px; background-color: #e74c3c; color: white; border: none; border-radius: 4px; padding: 2px 5px; cursor: pointer;" 
+                                                onclick="deleteRecord('bbq_expenses_by_date_${expense.date}', ${expense.id}, 'expense')">删除</button>
+                                    </span>
+                                </li>`;
+                }
+                listHTML += `</ul><p class="daily-total" style="font-weight: bold; text-align: right; color: #e74c3c; border-top: 1px solid #ddd; padding-top: 5px; margin-top: 10px;">当日总支出: ${dailyTotal.toFixed(0)} Ks</p></div>`;
+                
+                expenseList.innerHTML += listHTML;
+            }
+            
+            expenseList.innerHTML = `<h3 style="color: #e74c3c; text-align: center; margin-bottom: 15px;">累计总支出: ${grandTotalExpense.toFixed(0)} Ks</h3>` + expenseList.innerHTML;
+
+             // 重置表单中第一行的日期 (如果存在)
+            const firstDateInput = document.querySelector('#expense-entry-container .expense-date-input');
+            if(firstDateInput) {
+                firstDateInput.value = getTodayDateString();
+            }
+        }
+
+        // --- 通用删除记录函数 (用于收入、支出) ---
+        function deleteRecord(key, id, type) {
+            if (!confirm('确定要删除这条记录吗？')) return;
+
+            let dailyRecords = JSON.parse(localStorage.getItem(key));
+            const index = dailyRecords.findIndex(record => record.id === id);
+            
+            if (index > -1) {
+                dailyRecords.splice(index, 1);
+                
+                if (dailyRecords.length === 0) {
+                     localStorage.removeItem(key); // 如果当天没有记录了，则移除整个 key
+                } else {
+                     localStorage.setItem(key, JSON.stringify(dailyRecords));
+                }
+                
+                if (type === 'income') {
+                    renderIncomes();
+                } else if (type === 'expense') {
+                    renderExpenses();
+                }
+            }
+        }
+        
+        
+        /**
+         * 导出到Excel (已修改，统一使用 getDailyFinancialData 的数据源)
          */
         function exportToExcel() {
             const data = [];
-            data.push(['日期', '桌号', '时间', '备注', '菜品', '数量', '单价', '小计', '订单总计']);
+            data.push(['日期', '类型', '桌号/描述', '时间', '备注', '菜品', '数量', '单价(Ks)', '金额(Ks)', '订单总计/损益(Ks)']);
             
-            const keys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key.startsWith('bbq_orders_by_date_')) {
-                        keys.push(key);
-                    }
-                }
+            const { dailyRecords } = getDailyFinancialData();
                 
-                keys.sort().reverse();
+            for (const day of dailyRecords) {
                 
-                for (const key of keys) {
-                    const date = key.replace('bbq_orders_by_date_', '');
-                    const dailyOrders = JSON.parse(localStorage.getItem(key));
+                // 1. 销售订单
+                for (const order of day.orders) {
+                    const timestamp = new Date(order.timestamp);
+                    const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
                     
-                    for (const order of dailyOrders) {
-                        const timestamp = new Date(order.timestamp);
-                        const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
-                        
-                        let hasItems = false;
-                        for (const itemName in order.order) {
-                            hasItems = true;
-                            const quantity = order.order[itemName];
-                            const item = menuItems.find(i => i.name === itemName) || { price: 0 };
-                            const subtotal = item.price * quantity;
-                            data.push([date, order.table, timeString, order.note || '', itemName, quantity, item.price, subtotal, '']);
-                        }
-                        if (hasItems) {
-                            data[data.length - 1][8] = order.total; 
-                        } else {
-                            data.push([date, order.table, timeString, order.note || '', '', '', '', '', order.total]);
-                        }
+                    let hasItems = false;
+                    for (const itemName in order.order) {
+                        hasItems = true;
+                        const quantity = order.order[itemName];
+                        const item = menuItems.find(i => i.name === itemName) || { price: 0 };
+                        const subtotal = item.price * quantity;
+                        // 日期, 类型, 桌号/描述, 时间, 备注, 菜品, 数量, 单价, 金额, 订单总计/当日总计
+                        data.push([day.date, '销售订单', order.table, timeString, order.note || '', itemName, quantity, item.price, subtotal, '']);
+                    }
+                    if (hasItems) {
+                        data[data.length - 1][9] = order.total; // 在订单的最后一行写入总计
+                    } else {
+                        data.push([day.date, '销售订单', order.table, timeString, order.note || '', '', '', '', 0, order.total]);
                     }
                 }
                 
-                const ws = XLSX.utils.aoa_to_sheet(data);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "历史账单");
+                // 2. 其他收入
+                for (const income of day.incomes) {
+                    const timestamp = new Date(income.timestamp);
+                    const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
+                    // 日期, 类型, 桌号/描述, 时间, 备注, 菜品, 数量, 单价, 金额, 订单总计/当日总计
+                    data.push([day.date, '其他收入', income.description, timeString, '', '', 1, income.amount, income.amount, income.amount]);
+                }
                 
-                XLSX.writeFile(wb, '历史账单.xlsx');
+                // 3. 支出
+                for (const expense of day.expenses) {
+                    const timestamp = new Date(expense.timestamp);
+                    const timeString = `${timestamp.getHours().toString().padStart(2, '0')}:${timestamp.getMinutes().toString().padStart(2, '0')}:${timestamp.getSeconds().toString().padStart(2, '0')}`;
+                    // 日期, 类型, 桌号/描述, 时间, 备注, 菜品, 数量, 单价, 金额, 订单总计/当日总计
+                    data.push([day.date, '支出', expense.description, timeString, '', '', 1, -expense.amount, -expense.amount, -expense.amount]); // 支出记为负数
+                }
+                
+                // 4. 每日损益总结 (单独一行)
+                const netText = day.net >= 0 ? '净盈利' : '净亏损';
+                const netAmount = day.net;
+                data.push([day.date, '每日总结', netText, '', '', '', '', '', '', netAmount]);
             }
+                
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "历史资金记录");
+            
+            XLSX.writeFile(wb, '历史资金记录.xlsx');
+        }
             
             /**
              * 清空所有历史账单
              */
             function clearAllHistory() {
-                if (confirm("确定要清空所有历史账单吗？此操作不可恢复！")) {
+                if (confirm("确定要清空所有历史销售订单、收入和支出记录吗？此操作不可恢复！")) {
                     const keysToRemove = [];
                     for (let i = 0; i < localStorage.length; i++) {
                         const key = localStorage.key(i);
-                        if (key.startsWith('bbq_orders_by_date_')) {
+                        if (key.startsWith('bbq_orders_by_date_') || 
+                            key.startsWith('bbq_incomes_by_date_') ||
+                            key.startsWith('bbq_expenses_by_date_')) {
                             keysToRemove.push(key);
                         }
                     }
@@ -1833,8 +2359,11 @@
                         localStorage.removeItem(key);
                     }
                     
-                    alert("所有历史账单已清空");
-                    renderSummary();
+                    alert("所有历史记录已清空");
+                    // 清空后重新渲染当前激活的视图
+                    if (currentSummaryView === 'profit-loss') renderProfitLoss();
+                    if (currentSummaryView === 'income') renderIncomes();
+                    if (currentSummaryView === 'expense') renderExpenses();
                 }
             }
 
@@ -1844,7 +2373,8 @@
                 await renderAllMenus();
                 generateTableSelectors();
                 updateBill();
-                settleButton.textContent = `结算${currentTable}号桌`;
+                const tableDisplay = (typeof currentTable === 'number' || (!isNaN(parseInt(currentTable)) && String(parseInt(currentTable)) === String(currentTable))) ? `${currentTable}号桌` : String(currentTable);
+                settleButton.textContent = `结算并清空${tableDisplay}`;
             }
 
             /** * 应用程序初始化函数 */
@@ -1917,7 +2447,8 @@
                 generateTableSelectors(); // 填充下拉菜单
                 updateBill();
                 
-                settleButton.textContent = `结算并清空${currentTable}号桌`;
+                const tableDisplay = (typeof currentTable === 'number' || (!isNaN(parseInt(currentTable)) && String(parseInt(currentTable)) === String(currentTable))) ? `${currentTable}号桌` : String(currentTable);
+                settleButton.textContent = `结算并清空${tableDisplay}`;
             }
             
             // 绑定 AudioContext 恢复逻辑到用户首次点击
